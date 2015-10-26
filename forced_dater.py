@@ -16,12 +16,22 @@ import sys
 def main():
     parser = build_argparser()
     args = parser.parse_args()
+    if (len(args.pkginfo) is 1 and
+            not args.pkginfo[0].endswith((".plist", ".pkginfo"))):
+        # File input
+        with open(args.pkginfo[0]) as paths:
+            paths_to_change = [
+                os.path.expanduser(path.strip("\n\t\"'"))
+                for path in paths.readlines() if not path.startswith("#")]
+    else:
+        paths_to_change = args.pkginfo
 
     if not is_valid_date(args.date):
         print "Invalid date! Please check formatting."
         sys.exit(1)
 
-    set_force_install_by_date(args.date, args.pkginfo)
+    set_force_install_by_date(args.date, paths_to_change)
+    # remove_key(args.date, args.pkginfo)
 
 
 def build_argparser():
@@ -36,7 +46,10 @@ def build_argparser():
              "(i.e. '') to remove the force_install_by_date key/value pair.")
     parser.add_argument("date", help=phelp)
 
-    phelp = "Any number of paths to pkginfo files to update."
+    phelp = ("Any number of paths to pkginfo files to update, or a path to a "
+             "file to use for input. Format should have one path per line, "
+             "with comments allowed.")
+
     parser.add_argument("pkginfo", help=phelp, nargs="*")
 
     return parser
@@ -68,12 +81,24 @@ def set_force_install_by_date(date, pkgsinfo):
             pkgsinfo: List of string paths to pkginfo files.
     """
     for pkginfo_path in pkgsinfo:
-        if os.path.exists(pkginfo_path):
+        if not pkginfo_path.startswith("#") and os.path.exists(pkginfo_path):
             pkginfo = plistlib.readPlist(pkginfo_path)
             if date:
                 pkginfo["force_install_after_date"] = date
             elif pkginfo.get("force_install_after_date"):
                 del pkginfo["force_install_after_date"]
+            # TODO: This could be restricted to only when files are changed
+            # TODO: Output when something is changed/ not changed.
+            plistlib.writePlist(pkginfo, pkginfo_path)
+
+
+def remove_key(key, pkgsinfo):
+    """"""
+    for pkginfo_path in pkgsinfo:
+        if not pkginfo_path.startswith("#") and os.path.exists(pkginfo_path):
+            pkginfo = plistlib.readPlist(pkginfo_path)
+            if key in pkginfo:
+                del pkginfo[key]
             # TODO: This could be restricted to only when files are changed
             # TODO: Output when something is changed/ not changed.
             plistlib.writePlist(pkginfo, pkginfo_path)
