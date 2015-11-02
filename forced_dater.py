@@ -3,15 +3,17 @@
 # License
 """Update a list of pkgsinfo files with a force_install_by_date value."""
 
-
+# TODO: This should just take a key and a new value. Try to see if the string
+# will match a datetime, otherwise, it's probably a string value. Do the same
+# thing for bool.
+# Total keys in all of my pkginfos are: array, date, dict, integer, key, string
 import argparse
 import datetime
 import os
-# pkgsinfo files should not be binary, so standard plistlib is fine.
-import plistlib
 import re
 import sys
 
+import plistlib
 
 def main():
     parser = build_argparser()
@@ -29,8 +31,10 @@ def main():
     if not is_valid_date(args.date):
         print "Invalid date! Please check formatting."
         sys.exit(1)
+    else:
+        date = get_datetime(args.date)
 
-    set_force_install_by_date(args.date, paths_to_change)
+    set_force_install_by_date(date, paths_to_change)
     # remove_key(args.date, args.pkginfo)
 
 
@@ -53,6 +57,11 @@ def build_argparser():
     parser.add_argument("pkginfo", help=phelp, nargs="*")
 
     return parser
+
+
+def get_datetime(date):
+    """Return a datetime object for correctly formatted string date."""
+    return datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
 
 
 def is_valid_date(date):
