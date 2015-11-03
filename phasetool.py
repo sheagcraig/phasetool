@@ -31,7 +31,11 @@ def main():
     else:
         date = get_datetime(args.date)
 
-    set_force_install_after_date(date, paths_to_change)
+    for path in paths_to_change:
+        if os.path.exists(path):
+            pkginfo = plistlib.readPlist(path)
+            set_force_install_after_date(date, pkginfo)
+            plistlib.writePlist(pkginfo, path)
     # remove_key(args.date, args.pkginfo)
 
 
@@ -84,24 +88,17 @@ def is_valid_date(date):
     return result
 
 
-def set_force_install_after_date(date, pkgsinfo):
-    """Set the force_install_after_date value for pkginfo files.
+def set_force_install_after_date(date, pkginfo):
+    """Set the force_install_after_date value for pkginfo file.
 
     Args:
-        date: Date string in the Munki pkginfo format:
-            'yyyy-mm-ddThh:mm:ssZ' or "" / None to remove.
-            pkgsinfo: List of string paths to pkginfo files.
+        date (datetime.datetime): Date to force install after.
+        pkginfo (plist): File to on which to change date.
     """
-    for pkginfo_path in pkgsinfo:
-        if os.path.exists(pkginfo_path):
-            pkginfo = plistlib.readPlist(pkginfo_path)
-            if date:
-                pkginfo["force_install_after_date"] = date
-            elif pkginfo.get("force_install_after_date"):
-                del pkginfo["force_install_after_date"]
-            # TODO: This could be restricted to only when files are changed
-            # TODO: Output when something is changed/ not changed.
-            plistlib.writePlist(pkginfo, pkginfo_path)
+    if date:
+        pkginfo["force_install_after_date"] = date
+    elif pkginfo.get("force_install_after_date"):
+        del pkginfo["force_install_after_date"]
 
 
 def remove_key(key, pkgsinfo):
