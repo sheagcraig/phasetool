@@ -35,6 +35,7 @@ def main():
         if os.path.exists(path):
             pkginfo = plistlib.readPlist(path)
             set_force_install_after_date(date, pkginfo)
+            set_unattended_install(False, pkginfo)
             plistlib.writePlist(pkginfo, path)
     # remove_key(args.date, args.pkginfo)
 
@@ -45,10 +46,11 @@ def build_argparser():
                    "number of pkginfo files")
     parser = argparse.ArgumentParser(description=description)
 
-    phelp = ("Date to use as the value for force_install_after_date. Format is: "
-             "'yyyy-mm-ddThh:mm:ssZ'. For example, August 3rd 2011 at 1PM is "
-             "the following: '2011-08-03T13:00:00Z'. OR, use a blank string "
-             "(i.e. '') to remove the force_install_after_date key/value pair.")
+    phelp = (
+        "Date to use as the value for force_install_after_date. Format is: "
+        "'yyyy-mm-ddThh:mm:ssZ'. For example, August 3rd 2011 at 1PM is the "
+        "following: '2011-08-03T13:00:00Z'. OR, use a blank string (i.e. '') "
+        "to remove the force_install_after_date key/value pair.")
     parser.add_argument("date", help=phelp)
 
     phelp = ("Any number of paths to pkginfo files to update, or a path to a "
@@ -99,6 +101,19 @@ def set_force_install_after_date(date, pkginfo):
         pkginfo["force_install_after_date"] = date
     elif pkginfo.get("force_install_after_date"):
         del pkginfo["force_install_after_date"]
+
+
+def set_unattended_install(val, pkginfo):
+    """Set the unattended_install value for pkginfo file.
+    Args:
+        val (bool): Value to set.
+        pkginfo (plist): File to on which to change date.
+    """
+    set_key("unattended_install", val, pkginfo)
+
+
+def set_key(key, val, pkginfo):
+    pkginfo[key] = val
 
 
 def remove_key(key, pkgsinfo):
