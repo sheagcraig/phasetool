@@ -8,7 +8,6 @@ import os
 import plistlib
 import subprocess
 import sys
-import unittest
 
 import mock
 from nose.tools import *
@@ -38,6 +37,7 @@ class TestPhaseTool():
 
         assert_equal(self.test_datetime,
                      mock_plistlib.call_args[0][0]["force_install_after_date"])
+        assert_false(mock_plistlib.call_args[0][0]["unattended_install"])
 
         # Leif is feeling good, so he tries a bunch of files.
         sys.argv = ["phasetool.py", self.test_date]
@@ -47,9 +47,13 @@ class TestPhaseTool():
         assert_equal(
             self.test_datetime,
             mock_plistlib.call_args_list[1][0][0]["force_install_after_date"])
+        assert_false(
+            mock_plistlib.call_args_list[1][0][0]["unattended_install"])
         assert_equal(
             self.test_datetime,
             mock_plistlib.call_args_list[2][0][0]["force_install_after_date"])
+        assert_false(
+            mock_plistlib.call_args_list[2][0][0]["unattended_install"])
 
         # Leif decides typing all of those filenames in is no fun, and
         # decides to try passing a filename that contains pkginfo paths.
@@ -64,6 +68,8 @@ class TestPhaseTool():
         assert_equal(
             self.test_datetime,
             mock_plistlib.call_args_list[3][0][0]["force_install_after_date"])
+        assert_false(
+            mock_plistlib.call_args_list[3][0][0]["unattended_install"])
 
     def run_phasetool(self, date, files):
         command = ["python", "phasetool.py", date]
