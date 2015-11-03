@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # License
-"""Update a list of pkgsinfo files with a force_install_by_date value."""
+"""Update a list of pkgsinfo files with a force_install_after_date value."""
 
 # TODO: This should just take a key and a new value. Try to see if the string
 # will match a datetime, otherwise, it's probably a string value. Do the same
@@ -31,20 +31,20 @@ def main():
     else:
         date = get_datetime(args.date)
 
-    set_force_install_by_date(date, paths_to_change)
+    set_force_install_after_date(date, paths_to_change)
     # remove_key(args.date, args.pkginfo)
 
 
 def build_argparser():
     """Create our argument parser."""
-    description = ("Set the force_install_by_date key and value for any "
+    description = ("Set the force_install_after_date key and value for any "
                    "number of pkginfo files")
     parser = argparse.ArgumentParser(description=description)
 
-    phelp = ("Date to use as the value for force_install_by_date. Format is: "
+    phelp = ("Date to use as the value for force_install_after_date. Format is: "
              "'yyyy-mm-ddThh:mm:ssZ'. For example, August 3rd 2011 at 1PM is "
              "the following: '2011-08-03T13:00:00Z'. OR, use a blank string "
-             "(i.e. '') to remove the force_install_by_date key/value pair.")
+             "(i.e. '') to remove the force_install_after_date key/value pair.")
     parser.add_argument("date", help=phelp)
 
     phelp = ("Any number of paths to pkginfo files to update, or a path to a "
@@ -84,8 +84,8 @@ def is_valid_date(date):
     return result
 
 
-def set_force_install_by_date(date, pkgsinfo):
-    """Set the force_install_by_date value for pkginfo files.
+def set_force_install_after_date(date, pkgsinfo):
+    """Set the force_install_after_date value for pkginfo files.
 
     Args:
         date: Date string in the Munki pkginfo format:
