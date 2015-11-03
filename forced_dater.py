@@ -21,10 +21,7 @@ def main():
     if (len(args.pkginfo) is 1 and
             not args.pkginfo[0].endswith((".plist", ".pkginfo"))):
         # File input
-        with open(args.pkginfo[0]) as paths:
-            paths_to_change = [
-                os.path.expanduser(path.strip("\n\t\"'"))
-                for path in paths.readlines() if not path.startswith("#")]
+        paths_to_change = get_pkginfo_from_file(args.pkginfo[0])
     else:
         paths_to_change = args.pkginfo
 
@@ -59,6 +56,12 @@ def build_argparser():
     return parser
 
 
+def get_pkginfo_from_file(path):
+    with open(path) as paths:
+        paths_to_change = [
+            os.path.expanduser(path.strip("\n\t\"'"))
+            for path in paths.readlines() if not path.startswith("#")]
+
 def get_datetime(date):
     """Return a datetime object for correctly formatted string date."""
     return datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
@@ -90,7 +93,7 @@ def set_force_install_by_date(date, pkgsinfo):
             pkgsinfo: List of string paths to pkginfo files.
     """
     for pkginfo_path in pkgsinfo:
-        if not pkginfo_path.startswith("#") and os.path.exists(pkginfo_path):
+        if os.path.exists(pkginfo_path):
             pkginfo = plistlib.readPlist(pkginfo_path)
             if date:
                 pkginfo["force_install_after_date"] = date
