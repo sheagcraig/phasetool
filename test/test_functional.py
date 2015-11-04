@@ -1,5 +1,24 @@
-"""Functional tests for phasetool. Since it seems to be a thing to
-name the user for your user story, we will name our user Leif.
+#!/usr/bin/env python
+# Copyright (C) 2015 Shea G Craig <shea.craig@sas.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+"""Functional tests for phasetool.
+
+Since it seems to be a thing to name the user for your user story, we
+will name our user Leif.
 """
 
 
@@ -14,6 +33,7 @@ from nose.tools import *
 
 import phasetool
 
+
 class TestPhaseTool():
     """Leif tries to automate his Munki and AutoPkg phase testing."""
 
@@ -23,7 +43,7 @@ class TestPhaseTool():
                                                         "%Y-%m-%dT%H:%M:%SZ")
 
     @mock.patch("phasetool.plistlib.writePlist", autospec=True)
-    def test_setting_dates(self, mock_plistlib):
+    def test_setting_dates(self, mock_write_plist):
         # First, Leif is a bit uneasy about dumping a big chunk of
         # pkginfos into this thing. So he tries just a date.
         output = self.run_phasetool(self.test_date, [])
@@ -46,14 +66,16 @@ class TestPhaseTool():
 
         assert_equal(
             self.test_datetime,
-            mock_plistlib.call_args_list[1][0][0]["force_install_after_date"])
+            mock_write_plist.call_args_list[1][0][0][
+                "force_install_after_date"])
         assert_false(
-            mock_plistlib.call_args_list[1][0][0]["unattended_install"])
+            mock_write_plist.call_args_list[1][0][0]["unattended_install"])
         assert_equal(
             self.test_datetime,
-            mock_plistlib.call_args_list[2][0][0]["force_install_after_date"])
+            mock_write_plist.call_args_list[2][0][0][
+                "force_install_after_date"])
         assert_false(
-            mock_plistlib.call_args_list[2][0][0]["unattended_install"])
+            mock_write_plist.call_args_list[2][0][0]["unattended_install"])
 
         # Leif decides typing all of those filenames in is no fun, and
         # decides to try passing a filename that contains pkginfo paths.
@@ -67,7 +89,8 @@ class TestPhaseTool():
 
         assert_equal(
             self.test_datetime,
-            mock_plistlib.call_args_list[3][0][0]["force_install_after_date"])
+            mock_write_plist.call_args_list[3][0][0][
+                "force_install_after_date"])
         assert_false(
             mock_plistlib.call_args_list[3][0][0]["unattended_install"])
 

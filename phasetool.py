@@ -1,12 +1,33 @@
 #!/usr/bin/env python
+# Copyright (C) 2015 Shea G Craig <shea.craig@sas.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# License
-"""Update a list of pkgsinfo files with a force_install_after_date value."""
 
-# TODO: This should just take a key and a new value. Try to see if the string
-# will match a datetime, otherwise, it's probably a string value. Do the same
-# thing for bool.
-# Total keys in all of my pkginfos are: array, date, dict, integer, key, string
+"""Automate Phase Testing With Munki
+
+Updates a list of pkgsinfo files with a force_install_after_date value
+and unattended_install value of False.
+"""
+
+
+# TODO: This should just take a key and a new value. Try to see if the
+# string will match a datetime, otherwise, it's probably a string value.
+# Do the same thing for bool.  Total keys in all of my pkginfos are:
+# array, date, dict, integer, key, string
+
+
 import argparse
 import datetime
 import os
@@ -14,6 +35,7 @@ import re
 import sys
 
 import plistlib
+
 
 def main():
     parser = build_argparser()
@@ -37,7 +59,6 @@ def main():
             set_force_install_after_date(date, pkginfo)
             set_unattended_install(False, pkginfo)
             plistlib.writePlist(pkginfo, path)
-    # remove_key(args.date, args.pkginfo)
 
 
 def build_argparser():
@@ -68,13 +89,23 @@ def get_pkginfo_from_file(path):
             os.path.expanduser(path.strip("\n\t\"'"))
             for path in paths.readlines() if not path.startswith("#")]
 
+
 def get_datetime(date):
     """Return a datetime object for correctly formatted string date."""
     return datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
 
 
 def is_valid_date(date):
-    """Ensure date is in the correct format."""
+    """Ensure date is in the correct format.
+
+    Format is: 'yyyy-mm-ddThh:mm:ssZ'. For example, August 3rd 2011 at
+        1PM is: '2011-08-03T13:00:00Z'.
+
+    date (string): Date string to validate.
+
+    Returns:
+        Boolean.
+    """
     result = False
     pattern = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z"
     match = True if re.match(pattern, date) else False
@@ -105,6 +136,7 @@ def set_force_install_after_date(date, pkginfo):
 
 def set_unattended_install(val, pkginfo):
     """Set the unattended_install value for pkginfo file.
+
     Args:
         val (bool): Value to set.
         pkginfo (plist): File to on which to change date.
@@ -113,19 +145,30 @@ def set_unattended_install(val, pkginfo):
 
 
 def set_key(key, val, pkginfo):
+    """Set pkginfo's key to val.
+
+    Args:
+        key (string): The key name.
+        val (string, bool, datetime, int, list, dict): Value to set.
+            List and dict values may include any combination of other
+            valid types from this list.
+        pkginfo (plist): The pkginfo plist object to change.
+    """
     pkginfo[key] = val
 
 
-def remove_key(key, pkgsinfo):
-    """"""
-    for pkginfo_path in pkgsinfo:
-        if not pkginfo_path.startswith("#") and os.path.exists(pkginfo_path):
-            pkginfo = plistlib.readPlist(pkginfo_path)
-            if key in pkginfo:
-                del pkginfo[key]
-            # TODO: This could be restricted to only when files are changed
-            # TODO: Output when something is changed/ not changed.
-            plistlib.writePlist(pkginfo, pkginfo_path)
+def remove_key(key, pkginfo):
+    """Remove a key/value pair from a pkginfo file.
+
+    Args:
+        key (string): Key to remove.
+        pkginfo (plist): The pkginfo plist object to change.
+    """
+    if key in pkginfo:
+        del pkginfo[key]
+    # TODO: This could be restricted to only when files are changed
+    # TODO: Output when something is changed/ not changed.
+
 
 if __name__ == "__main__":
     main()
