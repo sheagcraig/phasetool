@@ -22,12 +22,6 @@ and unattended_install value of False.
 """
 
 
-# TODO: This should just take a key and a new value. Try to see if the
-# string will match a datetime, otherwise, it's probably a string value.
-# Do the same thing for bool.  Total keys in all of my pkginfos are:
-# array, date, dict, integer, key, string
-
-
 import argparse
 import datetime
 import os
@@ -39,6 +33,52 @@ import plistlib
 def main():
     parser = build_argparser()
     args = parser.parse_args()
+    args.func(args)
+
+
+def build_argparser():
+    """Create our argument parser."""
+    description = ("Set the force_install_after_date key and value for any "
+                   "number of pkginfo files")
+    parser = argparse.ArgumentParser(description=description)
+    subparser = parser.add_subparsers(help="Sub-command help")
+
+    # Collect arguments
+    phelp = "Collect available updates and generate markdown listing."
+    collect_parser = subparser.add_parser("collect", help=phelp)
+    collect_parser.set_defaults(func=collect)
+
+    # Set Pkginfo arguments
+    phelp = ("Set the force_install_after_date key and value for any number "
+             "of pkginfo files")
+    pkginfo_parser = subparser.add_parser("prepare", help=phelp)
+    phelp = (
+        "Date to use as the value for force_install_after_date. Format is: "
+        "'yyyy-mm-ddThh:mm:ssZ'. For example, August 3rd 2011 at 1PM is the "
+        "following: '2011-08-03T13:00:00Z'. OR, use a blank string (i.e. '') "
+        "to remove the force_install_after_date key/value pair.")
+    pkginfo_parser.add_argument("date", help=phelp)
+    phelp = ("Any number of paths to pkginfo files to update, or a path to a "
+             "file to use for input. Format should have one path per line, "
+             "with comments allowed.")
+    pkginfo_parser.add_argument("pkginfo", help=phelp, nargs="*")
+    pkginfo_parser.set_defaults(func=prepare)
+
+    return parser
+
+
+def collect(args):
+    pass
+
+
+def write_collection_results(markdown_data, path):
+    """Write markdown data string to path."""
+    with open(path, "w") as markdown_file:
+        markdown_file.write(path)
+
+
+def prepare(args):
+    """"""
     if (len(args.pkginfo) is 1 and
             not args.pkginfo[0].endswith((".plist", ".pkginfo"))):
         # File input
@@ -60,34 +100,6 @@ def main():
             set_force_install_after_date(date, pkginfo)
             set_unattended_install(False, pkginfo)
             plistlib.writePlist(pkginfo, path)
-
-
-def build_argparser():
-    """Create our argument parser."""
-    description = ("Set the force_install_after_date key and value for any "
-                   "number of pkginfo files")
-    parser = argparse.ArgumentParser(description=description)
-
-    phelp = (
-        "Date to use as the value for force_install_after_date. Format is: "
-        "'yyyy-mm-ddThh:mm:ssZ'. For example, August 3rd 2011 at 1PM is the "
-        "following: '2011-08-03T13:00:00Z'. OR, use a blank string (i.e. '') "
-        "to remove the force_install_after_date key/value pair.")
-    parser.add_argument("date", help=phelp)
-
-    phelp = ("Any number of paths to pkginfo files to update, or a path to a "
-             "file to use for input. Format should have one path per line, "
-             "with comments allowed.")
-
-    parser.add_argument("pkginfo", help=phelp, nargs="*")
-
-    return parser
-
-
-def write_collection_results(markdown_data, path):
-    """Write markdown data string to path."""
-    with open(path, "w") as markdown_file:
-        markdown_file.write(path)
 
 
 def get_pkginfo_from_file(path):

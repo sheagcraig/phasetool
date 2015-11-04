@@ -47,19 +47,19 @@ class TestPhaseTool():
     def test_setting_dates(self, mock_write_plist):
         # First, Leif is a bit uneasy about dumping a big chunk of
         # pkginfos into this thing. So he tries just a date.
-        args = [self.test_date]
+        args = ["prepare", self.test_date]
         result = self.get_phasetool_results(args)
         assert_is_none(result)
 
         # Okay-let's try this for real. Leif is going to update an
         # actual file.
-        args = [self.test_date, self.test_file]
+        args = ["prepare", self.test_date, self.test_file]
         result = self.get_phasetool_results(args)
         assert_equal(self.test_datetime, result[0]["force_install_after_date"])
         assert_false(result[0]["unattended_install"])
 
         # Leif is feeling good, so he tries a bunch of files.
-        args = [self.test_date] + 2 * [self.test_file]
+        args = ["prepare", self.test_date] + 2 * [self.test_file]
         result = self.get_phasetool_results(args)
         assert_equal(self.test_datetime, result[0]["force_install_after_date"])
         assert_false(result[0]["unattended_install"])
@@ -72,7 +72,7 @@ class TestPhaseTool():
         mock_file_list = mock.patch("phasetool.get_pkginfo_from_file",
                                     return_value=mock_files)
         mock_file_list.start()
-        args = [self.test_date, "file list"]
+        args = ["prepare", self.test_date, "file list"]
         result = self.get_phasetool_results(args)
         mock_file_list.stop()
 
@@ -84,7 +84,7 @@ class TestPhaseTool():
         """Leif wants to remove the force_install_after_date from a
         pkginfo.
         """
-        args = ["", self.test_file]
+        args = ["prepare", "", self.test_file]
         result = self.get_phasetool_results(args)
 
         assert_is_none(result[0].get("force_install_after_date"))
@@ -101,7 +101,6 @@ class TestPhaseTool():
         result = phasetool.main()
         result_content = result.call_args[0][0]
         assert_equal(expected_result, result_content)
-
 
     @mock.patch("phasetool.plistlib.writePlist", autospec=True)
     def get_phasetool_results(self, args, mock_write_plist):
