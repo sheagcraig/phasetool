@@ -102,8 +102,19 @@ class TestPhaseTool():
             plistlib.writePlist and returns a list of just the plist
             files that were "written".
         """
-        sys.argv = ["phasetool.py"] + args
+        sys.argv = self.build_args(args)
         phasetool.main()
         result = ([call[0][0] for call in mock_write_plist.call_args_list] if
                   mock_write_plist.called else None)
         return result
+
+    def build_args(self, args):
+        """Build arguments to add to sys.argv.
+
+        Args:
+            args (list of strings): Command line arguments to run
+                phasetool with.
+        Returns:
+            List of strings with script name properly prepended.
+        """
+        return ["phasetool.py"] + args
