@@ -23,18 +23,15 @@ will name our user Leif.
 
 
 import datetime
-import os
-import plistlib
-import subprocess
 import sys
 
 import mock
-from nose.tools import *
+from nose.tools import *  # pylint: disable=unused-wildcard-import, wildcard-import
 
-import phasetool
+import phasetool  # pylint: disable=import-error
 
 
-class TestPhaseTool():
+class TestPhaseTool(object):
     """Leif tries to automate his Munki and AutoPkg phase testing."""
 
     def __init__(self):
@@ -43,8 +40,8 @@ class TestPhaseTool():
         self.test_datetime = datetime.datetime.strptime(self.test_date,
                                                         "%Y-%m-%dT%H:%M:%SZ")
 
-    @mock.patch("phasetool.plistlib.writePlist", autospec=True)
-    def test_setting_dates(self, mock_write_plist):
+    def test_setting_dates(self):
+        """Test setting deployment info on pkginfo files."""
         # First, Leif is a bit uneasy about dumping a big chunk of
         # pkginfos into this thing. So he tries just a date.
         args = ["prepare", self.test_date]
@@ -79,8 +76,7 @@ class TestPhaseTool():
         assert_equal(self.test_datetime, result[0]["force_install_after_date"])
         assert_false(result[0]["unattended_install"])
 
-    @mock.patch("phasetool.plistlib.writePlist", autospec=True)
-    def test_removing_date(self, mock_write_plist):
+    def test_removing_date(self):
         """Leif wants to remove the force_install_after_date from a
         pkginfo.
         """
@@ -90,16 +86,16 @@ class TestPhaseTool():
         assert_is_none(result[0].get("force_install_after_date"))
 
     @mock.patch("phasetool.write_collection_results", autospec=True)
-    def test_collect_phase_testing_updates(self, mock_repo):
+    def test_collect_updates(self, mock_repo):
         """Test collecting updates from a repo for phase testing."""
         expected_result = ("# Phase Testing Updates\n"
                            "### Apple Updates\n- xyzzy\n\n"
                            "### 3rd Party Updates\n- Crypt 0.7.2")
         # Leif is testing the collection of updates to see what it
         # finds
-        sys.argv = self.build_args(["collect"])
-        result = phasetool.main()
-        result_content = result.call_args[0][0]
+        sys.argv = build_args(["collect"])
+        phasetool.main()
+        result_content = mock_repo.call_args[0][0]
         assert_equal(expected_result, result_content)
 
     @mock.patch("phasetool.plistlib.writePlist", autospec=True)
@@ -115,19 +111,20 @@ class TestPhaseTool():
             plistlib.writePlist and returns a list of just the plist
             files that were "written".
         """
-        sys.argv = self.build_args(args)
+        sys.argv = build_args(args)
         phasetool.main()
         result = ([call[0][0] for call in mock_write_plist.call_args_list] if
                   mock_write_plist.called else None)
         return result
 
-    def build_args(self, args):
-        """Build arguments to add to sys.argv.
 
-        Args:
-            args (list of strings): Command line arguments to run
-                phasetool with.
-        Returns:
-            List of strings with script name properly prepended.
-        """
-        return ["phasetool.py"] + args
+def build_args(args):
+    """Build arguments to add to sys.argv.
+
+    Args:
+        args (list of strings): Command line arguments to run
+            phasetool with.
+    Returns:
+        List of strings with script name properly prepended.
+    """
+    return ["phasetool.py"] + args

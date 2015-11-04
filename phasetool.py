@@ -31,6 +31,7 @@ import plistlib
 
 
 def main():
+    """Build and parse args, and then kick-off action function."""
     parser = build_argparser()
     args = parser.parse_args()
     args.func(args)
@@ -68,6 +69,7 @@ def build_argparser():
 
 
 def collect(args):
+    """Collect available updates into markdown for presentation."""
     pass
 
 
@@ -78,7 +80,7 @@ def write_collection_results(markdown_data, path):
 
 
 def prepare(args):
-    """"""
+    """Set keys relevent to phase deployment."""
     if (len(args.pkginfo) is 1 and
             not args.pkginfo[0].endswith((".plist", ".pkginfo"))):
         # File input
@@ -103,10 +105,12 @@ def prepare(args):
 
 
 def get_pkginfo_from_file(path):
+    """Convert file contents into a list of paths, ignoring comments."""
     with open(path) as paths:
         paths_to_change = [
             os.path.expanduser(path.strip("\n\t\"'"))
             for path in paths.readlines() if not path.startswith("#")]
+    return paths_to_change
 
 
 def get_datetime(date):

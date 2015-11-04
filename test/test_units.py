@@ -21,13 +21,13 @@
 import copy
 import datetime
 
-from nose.tools import *
+from nose.tools import *  # pylint: disable=unused-wildcard-import, wildcard-import
 
-import phasetool
+import phasetool  # pylint: disable=import-error
 
 
 class TestPhaseToolUnits(object):
-    """"""
+    """Test the phasetool prepare units."""
 
     def __init__(self):
         self.test_plist = phasetool.plistlib.readPlist(
@@ -36,19 +36,22 @@ class TestPhaseToolUnits(object):
         self.test_datetime = datetime.datetime.strptime(
             self.test_date, "%Y-%m-%dT%H:%M:%SZ")
 
-    def test_set_force_install_after_date(self):
+    def test_set_install_after_date(self):
+        """Set a date."""
         target_plist = copy.deepcopy(self.test_plist)
         phasetool.set_force_install_after_date(
             self.test_datetime, target_plist)
-        assert_equals(target_plist["force_install_after_date"],
-                      self.test_datetime)
+        assert_equal(target_plist["force_install_after_date"],
+                     self.test_datetime)
 
-    def test_del_force_install_after_date(self):
+    def test_del_install_after_date(self):
+        """Remove an install date key entirely."""
         target_plist = copy.deepcopy(self.test_plist)
         phasetool.set_force_install_after_date("", target_plist)
         assert_is_none(target_plist.get("force_install_after_date"))
 
     def test_set_unattended_install(self):
+        """Test setting unattended."""
         target_plist = copy.deepcopy(self.test_plist)
         phasetool.set_unattended_install(False, target_plist)
-        assert_equals(target_plist["unattended_install"], False)
+        assert_equal(target_plist["unattended_install"], False)
