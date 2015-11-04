@@ -43,6 +43,11 @@ class TestPhaseToolUnits(object):
         assert_equals(target_plist["force_install_after_date"],
                       self.test_datetime)
 
+    def test_del_force_install_after_date(self):
+        target_plist = copy.deepcopy(self.test_plist)
+        phasetool.set_force_install_after_date("", target_plist)
+        assert_is_none(target_plist.get("force_install_after_date"))
+
     def test_set_unattended_install(self):
         target_plist = copy.deepcopy(self.test_plist)
         phasetool.set_unattended_install(False, target_plist)

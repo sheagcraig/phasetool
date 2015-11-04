@@ -46,7 +46,9 @@ def main():
     else:
         paths_to_change = args.pkginfo
 
-    if not is_valid_date(args.date):
+    if not args.date:
+        date = None
+    elif not is_valid_date(args.date):
         print "Invalid date! Please check formatting."
         sys.exit(1)
     else:

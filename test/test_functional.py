@@ -55,9 +55,10 @@ class TestPhaseTool():
                     "test/resources/Crypt-0.7.2.pkginfo"]
         phasetool.main()
 
-        assert_equal(self.test_datetime,
-                     mock_plistlib.call_args[0][0]["force_install_after_date"])
-        assert_false(mock_plistlib.call_args[0][0]["unattended_install"])
+        assert_equal(
+            self.test_datetime,
+            mock_write_plist.call_args[0][0]["force_install_after_date"])
+        assert_false(mock_write_plist.call_args[0][0]["unattended_install"])
 
         # Leif is feeling good, so he tries a bunch of files.
         sys.argv = ["phasetool.py", self.test_date]
@@ -92,7 +93,20 @@ class TestPhaseTool():
             mock_write_plist.call_args_list[3][0][0][
                 "force_install_after_date"])
         assert_false(
-            mock_plistlib.call_args_list[3][0][0]["unattended_install"])
+            mock_write_plist.call_args_list[3][0][0]["unattended_install"])
+
+    @mock.patch("phasetool.plistlib.writePlist", autospec=True)
+    def test_removing_date(self, mock_write_plist):
+        """Leif wants to remove the force_install_after_date from a
+        pkginfo.
+        """
+        sys.argv = ["phasetool.py", "",
+                    "test/resources/Crypt-0.7.2.pkginfo"]
+        phasetool.main()
+
+        assert_is_none(
+            mock_write_plist.call_args[0][0].get("force_install_after_date"))
+
 
     def run_phasetool(self, date, files):
         command = ["python", "phasetool.py", date]
