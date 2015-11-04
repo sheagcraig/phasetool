@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<array>
+	<dict>
+		<key>autoremove</key>
+		<false/>
+		<key>catalogs</key>
+		<array>
+			<string>production</string>
+		</array>
+		<key>category</key>
+		<string>Security</string>
+		<key>description</key>
+		<string>Crypt is a system for enabling FileVault 2 encryption and safely storing the recovery keys on a remote server.</string>
+		<key>developer</key>
+		<string>Munki</string>
+		<key>display_name</key>
+		<string>Crypt - enables FileVault encryption</string>
+		<key>icon_hash</key>
+		<string>351ede830a4f0c359554d0f89d0249a438d580f8d282e62cc146d1522e9fe484</string>
+		<key>installable_condition</key>
+		<string>machine_type == "laptop"</string>
+		<key>installcheck_script</key>
+		<string>#!/bin/bash
+
+dir="/usr/local/crypt"
+plist="/Library/LaunchDaemons/com.grahamgilbert.crypt.needsescrow.plist"
+fvscript="/Library/Scripts/filevault.sh"
+DISKUTIL="/usr/sbin/diskutil"
+FDESETUP="/usr/bin/fdesetup"
+MODEL="$(ioreg -l |grep "product-name" |cut -d ""="" -f 2|sed -e s/[^[:alnum:]]//g | sed s/[0-9]//g)"
+  
+  if [[ ! $MODEL == *MacBook* ]]; then
+    echo "Do not install Crypt on desktops"
+    exit 1
+  fi
+
+  ${DISKUTIL} cs list | grep -q -e 'Conversion\ Status.*Pending'
+  if [[ ${?} -eq 0 ]]; then
+    echo "Disk encryption pending, skipping."
+    exit 1
+  fi
+
+  ${DISKUTIL} cs list | grep -q -e 'Conversion\ Status.*Complete'
+  if [[ ${?} -eq 0 ]]; then
+    echo "Disk encryption complete, skipping."
+    exit 1
+  fi
+
+  ${DISKUTIL} cs list | grep -q -e 'Conversion\ Status.*Converting'
+  if [[ ${?} -eq 0 ]]; then
+    echo "Disk encrypting or decrypting, skipping."
+    exit 1
+  fi
+
+  fvstatus=$(${FDESETUP} status | cut -c14-16)
+  if [[ "$fvstatus" = "Off" ]]; then
+    echo "FileVault is Off. Checking for Crypt binaries."
+    if [ -d "$dir" -a -e "$plist" -a -e "$fvscript" ]; then
+	  echo "/usr/local/crypt, plist, filevault.sh exist, Crypt is installed"
+	  exit 1
+    else
+      echo "/usr/local/crypt or plist or filevault.sh is missing, need to install Crypt"
+      exit 0
+    fi
+  fi</string>
+		<key>installed_size</key>
+		<integer>128</integer>
+		<key>installer_item_hash</key>
+		<string>f592ec549b909d59b9b9e868aff85946380410daf4db7ed8451b2ea20955fc58</string>
+		<key>installer_item_location</key>
+		<string>apps/Crypt_Client 2-0.7.2.pkg</string>
+		<key>installer_item_size</key>
+		<integer>64</integer>
+		<key>minimum_os_version</key>
+		<string>10.9.0</string>
+		<key>name</key>
+		<string>Crypt</string>
+		<key>postinstall_script</key>
+		<string>#!/bin/bash
+
+defaults write /Library/Preferences/com.apple.loginwindow LoginHook /Library/Scripts/filevault.sh
+defaults write /var/root/Library/Preferences/com.apple.loginwindow LoginHook /Library/Scripts/filevault.sh
+defaults write /Library/Preferences/FVServer NetworkCheck -bool NO</string>
+		<key>postuninstall_script</key>
+		<string>#!/bin/bash
+DISKUTIL="/usr/sbin/diskutil"
+FDESETUP="/usr/bin/fdesetup"
+
+  fvstatus=$(${FDESETUP} status | cut -c14-16)
+  if [[ "$fvstatus" = "Off" ]]; then
+    echo "FileVault is Off. Uninstall complete."
+    exit
+  fi
+
+  ${DISKUTIL} cs list | grep -q -e 'Conversion\ Status.*Pending'
+  if [[ ${?} -eq 0 ]]; then
+    echo "Disk encryption pending. Attempting to disable FileVault..."
+    fdesetup disable
+    exit
+  fi
+
+  ${DISKUTIL} cs list | grep -q -e 'Conversion\ Status.*Complete'
+  if [[ ${?} -eq 0 ]]; then
+    echo "Disk encryption complete. Disabling FileVault..."
+    fdesetup disable
+    exit
+  fi
+
+  ${DISKUTIL} cs list | grep -q -e 'Conversion\ Status.*Converting'
+  if [[ ${?} -eq 0 ]]; then
+    echo "Disk encrypting or decrypting. Attempting to disable FileVault..."
+    fdesetup disable
+    exit
+  fi</string>
+		<key>preuninstall_script</key>
+		<string>#!/bin/bash
+
+launchctl stop /Library/LaunchDaemons/com.grahamgilbert.crypt.needsescrow.plist</string>
+		<key>receipts</key>
+		<array>
+			<dict>
+				<key>installed_size</key>
+				<integer>128</integer>
+				<key>packageid</key>
+				<string>com.grahamgilbert.Crypt_Client</string>
+				<key>version</key>
+				<string>0.7.2</string>
+			</dict>
+		</array>
+		<key>unattended_install</key>
+		<true/>
+		<key>uninstall_method</key>
+		<string>uninstall_script</string>
+		<key>uninstall_script</key>
+		<string>#!/bin/bash
+
+rm -rf /usr/local/crypt/
+rm -rf /Library/LaunchAgents/com.grahamgilbert.crypt.needsescrow.plist
+rm -rf /Library/Scripts/filevault.sh
+rm -rf /Library/Preferences/FVServer.plist
+
+pkgutil --forget com.grahamgilbert.Crypt_Client
+
+lw="/Library/Preferences/com.apple.loginwindow.plist"
+
+defaults delete "$lw" LoginHook
+defaults delete /var/root"$lw" LoginHook
+
+exit 0</string>
+		<key>uninstallable</key>
+		<false/>
+		<key>uninstallcheck_script</key>
+		<string>#!/bin/bash
+
+dir="/usr/local/crypt"
+
+if [[ -d "$dir" ]]; then
+	echo "Crypt still installed, needs to be removed"
+	exit 0
+  else
+	echo "Crypt is not installed"
+    exit 1
+fi</string>
+		<key>version</key>
+		<string>0.7.2</string>
+	</dict>
+</array>
+</plist>

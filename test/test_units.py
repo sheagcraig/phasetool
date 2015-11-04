@@ -21,17 +21,33 @@
 import copy
 import datetime
 
+import mock
 from nose.tools import *  # pylint: disable=unused-wildcard-import, wildcard-import
 
 import phasetool  # pylint: disable=import-error
 
 
-class TestPhaseToolUnits(object):
+class TestGlobalUnits(object):
+    """Test the phasetool helper units."""
+
+    def test_get_munki_repo(self):
+        class MockArgs(object):
+
+            def __init__(self):
+                self.repo = "/tmp"
+
+        mock_args = MockArgs()
+        result = phasetool.get_munki_repo(mock_args)
+        assert_equal("/tmp", result)
+
+        # TODO: add test for no argument.
+
+class TestPrepareUnits(object):
     """Test the phasetool prepare units."""
 
     def __init__(self):
         self.test_plist = phasetool.plistlib.readPlist(
-            "test/resources/Crypt-0.7.2.pkginfo")
+            "test/resources/repo/pkgsinfo/Crypt-0.7.2.pkginfo")
         self.test_date = "2011-08-03T13:00:00Z"
         self.test_datetime = datetime.datetime.strptime(
             self.test_date, "%Y-%m-%dT%H:%M:%SZ")
@@ -55,3 +71,11 @@ class TestPhaseToolUnits(object):
         target_plist = copy.deepcopy(self.test_plist)
         phasetool.set_unattended_install(False, target_plist)
         assert_equal(target_plist["unattended_install"], False)
+
+
+class TestCollectUnits(object):
+    """Test the collection units."""
+
+    def test_get_catalogs(self):
+        catalogs = phasetool.get_catalogs("test/resources/repo/catalogs")
+        # TODO

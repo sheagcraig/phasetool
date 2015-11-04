@@ -34,6 +34,7 @@ def main():
     """Build and parse args, and then kick-off action function."""
     parser = build_argparser()
     args = parser.parse_args()
+    args.repo = get_munki_repo(args)
     args.func(args)
 
 
@@ -42,6 +43,11 @@ def build_argparser():
     description = ("Set the force_install_after_date key and value for any "
                    "number of pkginfo files")
     parser = argparse.ArgumentParser(description=description)
+
+    # Global arguments
+    parser.add_argument("-r", "--repo", help="Path to Munki repo. Will use "
+                        "munkiimport's configured repo if not specified.")
+
     subparser = parser.add_subparsers(help="Sub-command help")
 
     # Collect arguments
@@ -66,6 +72,16 @@ def build_argparser():
     pkginfo_parser.set_defaults(func=prepare)
 
     return parser
+
+
+def get_munki_repo(args):
+    """Use cli arg for repo, otherwise, get from munkiimport prefs."""
+    if args.repo:
+        return args.repo
+    else:
+        prefs = plistlib.readPlist(os.path.expanduser(
+            "~/Library/Preferences/com.googlecode.munki.munkiimport.plist"))
+        return prefs.get("repo_path")
 
 
 def collect(args):

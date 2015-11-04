@@ -35,7 +35,7 @@ class TestPhaseTool(object):
     """Leif tries to automate his Munki and AutoPkg phase testing."""
 
     def __init__(self):
-        self.test_file = "test/resources/Crypt-0.7.2.pkginfo"
+        self.test_file = "test/resources/repo/pkgsinfo/Crypt-0.7.2.pkginfo"
         self.test_date = "2011-08-03T13:00:00Z"
         self.test_datetime = datetime.datetime.strptime(self.test_date,
                                                         "%Y-%m-%dT%H:%M:%SZ")
