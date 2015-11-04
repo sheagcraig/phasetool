@@ -31,7 +31,6 @@ and unattended_install value of False.
 import argparse
 import datetime
 import os
-import re
 import sys
 
 import plistlib
@@ -107,17 +106,11 @@ def is_valid_date(date):
         Boolean.
     """
     result = False
-    pattern = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z"
-    match = True if re.match(pattern, date) else False
-    if match:
-        try:
-            converted_date = datetime.datetime.strptime(
-                date, "%Y-%m-%dT%H:%M:%SZ")
-            result = True
-        except ValueError as err:
-            print err, err.message, type(err)
-    elif not date:
+    try:
+        _ = datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
         result = True
+    except ValueError as err:
+        pass
     return result
 
 
