@@ -84,6 +84,12 @@ def build_argparser():
     return parser
 
 
+def write_collection_results(markdown_data, path):
+    """Write markdown data string to path."""
+    with open(path, "w") as markdown_file:
+        markdown_file.write(path)
+
+
 def get_pkginfo_from_file(path):
     with open(path) as paths:
         paths_to_change = [

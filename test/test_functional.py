@@ -89,6 +89,20 @@ class TestPhaseTool():
 
         assert_is_none(result[0].get("force_install_after_date"))
 
+    @mock.patch("phasetool.write_collection_results", autospec=True)
+    def test_collect_phase_testing_updates(self, mock_repo):
+        """Test collecting updates from a repo for phase testing."""
+        expected_result = ("# Phase Testing Updates\n"
+                           "### Apple Updates\n- xyzzy\n\n"
+                           "### 3rd Party Updates\n- Crypt 0.7.2")
+        # Leif is testing the collection of updates to see what it
+        # finds
+        sys.argv = self.build_args(["collect"])
+        result = phasetool.main()
+        result_content = result.call_args[0][0]
+        assert_equal(expected_result, result_content)
+
+
     @mock.patch("phasetool.plistlib.writePlist", autospec=True)
     def get_phasetool_results(self, args, mock_write_plist):
         """Put args into sys.argv and run phasetool.
