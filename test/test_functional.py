@@ -38,6 +38,7 @@ class TestPhaseTool():
     """Leif tries to automate his Munki and AutoPkg phase testing."""
 
     def __init__(self):
+        self.test_file = "test/resources/Crypt-0.7.2.pkginfo"
         self.test_date = "2011-08-03T13:00:00Z"
         self.test_datetime = datetime.datetime.strptime(self.test_date,
                                                         "%Y-%m-%dT%H:%M:%SZ")
@@ -46,72 +47,63 @@ class TestPhaseTool():
     def test_setting_dates(self, mock_write_plist):
         # First, Leif is a bit uneasy about dumping a big chunk of
         # pkginfos into this thing. So he tries just a date.
-        output = self.run_phasetool(self.test_date, [])
-        assert_equals(output, None)
+        args = [self.test_date]
+        result = self.get_phasetool_results(args)
+        assert_is_none(result)
 
         # Okay-let's try this for real. Leif is going to update an
         # actual file.
-        sys.argv = ["phasetool.py", self.test_date,
-                    "test/resources/Crypt-0.7.2.pkginfo"]
-        phasetool.main()
-
-        assert_equal(
-            self.test_datetime,
-            mock_write_plist.call_args[0][0]["force_install_after_date"])
-        assert_false(mock_write_plist.call_args[0][0]["unattended_install"])
+        args = [self.test_date, self.test_file]
+        result = self.get_phasetool_results(args)
+        assert_equal(self.test_datetime, result[0]["force_install_after_date"])
+        assert_false(result[0]["unattended_install"])
 
         # Leif is feeling good, so he tries a bunch of files.
-        sys.argv = ["phasetool.py", self.test_date]
-        sys.argv.extend(2 * [ "test/resources/Crypt-0.7.2.pkginfo"])
-        phasetool.main()
-
-        assert_equal(
-            self.test_datetime,
-            mock_write_plist.call_args_list[1][0][0][
-                "force_install_after_date"])
-        assert_false(
-            mock_write_plist.call_args_list[1][0][0]["unattended_install"])
-        assert_equal(
-            self.test_datetime,
-            mock_write_plist.call_args_list[2][0][0][
-                "force_install_after_date"])
-        assert_false(
-            mock_write_plist.call_args_list[2][0][0]["unattended_install"])
+        args = [self.test_date] + 2 * [self.test_file]
+        result = self.get_phasetool_results(args)
+        assert_equal(self.test_datetime, result[0]["force_install_after_date"])
+        assert_false(result[0]["unattended_install"])
+        assert_equal(self.test_datetime, result[1]["force_install_after_date"])
+        assert_false(result[1]["unattended_install"])
 
         # Leif decides typing all of those filenames in is no fun, and
         # decides to try passing a filename that contains pkginfo paths.
-        mock_files = ["test/resources/Crypt-0.7.2.pkginfo"]
+        mock_files = [self.test_file]
         mock_file_list = mock.patch("phasetool.get_pkginfo_from_file",
                                     return_value=mock_files)
         mock_file_list.start()
-        sys.argv = ["phasetool.py", self.test_date, "file list"]
-        phasetool.main()
+        args = [self.test_date, "file list"]
+        result = self.get_phasetool_results(args)
         mock_file_list.stop()
 
-        assert_equal(
-            self.test_datetime,
-            mock_write_plist.call_args_list[3][0][0][
-                "force_install_after_date"])
-        assert_false(
-            mock_write_plist.call_args_list[3][0][0]["unattended_install"])
+        assert_equal(self.test_datetime, result[0]["force_install_after_date"])
+        assert_false(result[0]["unattended_install"])
 
     @mock.patch("phasetool.plistlib.writePlist", autospec=True)
     def test_removing_date(self, mock_write_plist):
         """Leif wants to remove the force_install_after_date from a
         pkginfo.
         """
-        sys.argv = ["phasetool.py", "",
-                    "test/resources/Crypt-0.7.2.pkginfo"]
+        args = ["", self.test_file]
+        result = self.get_phasetool_results(args)
+
+        assert_is_none(result[0].get("force_install_after_date"))
+
+    @mock.patch("phasetool.plistlib.writePlist", autospec=True)
+    def get_phasetool_results(self, args, mock_write_plist):
+        """Put args into sys.argv and run phasetool.
+
+        Args:
+            args (list of strings): Positional args, flags, commands,
+                supplied as commandline arguments to phasetool.
+
+        Returns:
+            Takes mock.MagicMock object's call_args_list for mocked
+            plistlib.writePlist and returns a list of just the plist
+            files that were "written".
+        """
+        sys.argv = ["phasetool.py"] + args
         phasetool.main()
-
-        assert_is_none(
-            mock_write_plist.call_args[0][0].get("force_install_after_date"))
-
-
-    def run_phasetool(self, date, files):
-        command = ["python", "phasetool.py", date]
-        if isinstance(files, (tuple, list)):
-            command.extend(files)
-        else:
-            command.append(files)
-        output = subprocess.check_output(command)
+        result = ([call[0][0] for call in mock_write_plist.call_args_list] if
+                  mock_write_plist.called else None)
+        return result
