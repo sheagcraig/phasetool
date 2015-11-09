@@ -72,6 +72,12 @@ class TestPrepareUnits(object):
         phasetool.set_unattended_install(False, target_plist)
         assert_equal(target_plist["unattended_install"], False)
 
+    def test_set_catalog(self):
+        """Test setting catalog to a single value."""
+        target_plist = copy.deepcopy(self.test_plist)
+        phasetool.set_catalog("production", target_plist)
+        assert_list_equal(target_plist["catalogs"], ["production"])
+
 
 class TestCollectUnits(object):
     """Test the collection units."""

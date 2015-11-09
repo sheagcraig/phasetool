@@ -40,28 +40,31 @@ class TestPhaseTool(object):
         self.test_datetime = datetime.datetime.strptime(self.test_date,
                                                         "%Y-%m-%dT%H:%M:%SZ")
 
-    def test_setting_dates(self):
+    def test_prepare_setting_dates(self):
         """Test setting deployment info on pkginfo files."""
         # First, Leif is a bit uneasy about dumping a big chunk of
         # pkginfos into this thing. So he tries just a date.
-        args = ["prepare", self.test_date]
+        args = ["prepare", self.test_date, "phase1"]
         result = self.get_phasetool_results(args)
         assert_is_none(result)
 
         # Okay-let's try this for real. Leif is going to update an
         # actual file.
-        args = ["prepare", self.test_date, self.test_file]
+        args = ["prepare", self.test_date, "phase1", self.test_file]
         result = self.get_phasetool_results(args)
         assert_equal(self.test_datetime, result[0]["force_install_after_date"])
         assert_false(result[0]["unattended_install"])
+        assert_list_equal(result[0]["catalogs"], ["phase1"])
 
         # Leif is feeling good, so he tries a bunch of files.
-        args = ["prepare", self.test_date] + 2 * [self.test_file]
+        args = ["prepare", self.test_date, "phase1"] + 2 * [self.test_file]
         result = self.get_phasetool_results(args)
         assert_equal(self.test_datetime, result[0]["force_install_after_date"])
         assert_false(result[0]["unattended_install"])
+        assert_list_equal(result[0]["catalogs"], ["phase1"])
         assert_equal(self.test_datetime, result[1]["force_install_after_date"])
         assert_false(result[1]["unattended_install"])
+        assert_list_equal(result[1]["catalogs"], ["phase1"])
 
         # Leif decides typing all of those filenames in is no fun, and
         # decides to try passing a filename that contains pkginfo paths.
@@ -69,21 +72,62 @@ class TestPhaseTool(object):
         mock_file_list = mock.patch("phasetool.get_pkginfo_from_file",
                                     return_value=mock_files)
         mock_file_list.start()
-        args = ["prepare", self.test_date, "file list"]
+        args = ["prepare", self.test_date, "phase1", "file list"]
         result = self.get_phasetool_results(args)
         mock_file_list.stop()
 
         assert_equal(self.test_datetime, result[0]["force_install_after_date"])
         assert_false(result[0]["unattended_install"])
+        assert_list_equal(result[0]["catalogs"], ["phase1"])
 
-    def test_removing_date(self):
+    def test_prepare_removing_date(self):
         """Leif wants to remove the force_install_after_date from a
         pkginfo.
         """
-        args = ["prepare", "", self.test_file]
+        args = ["prepare", "", "phase1", self.test_file]
         result = self.get_phasetool_results(args)
 
         assert_is_none(result[0].get("force_install_after_date"))
+
+    def test_release_setting_dates(self):
+        """Test setting deployment info on pkginfo files."""
+        # First, Leif is a bit uneasy about dumping a big chunk of
+        # pkginfos into this thing. So he tries just a date.
+        args = ["release", self.test_date]
+        result = self.get_phasetool_results(args)
+        assert_is_none(result)
+
+        # Okay-let's try this for real. Leif is going to update an
+        # actual file.
+        args = ["release", self.test_date, self.test_file]
+        result = self.get_phasetool_results(args)
+        assert_equal(self.test_datetime, result[0]["force_install_after_date"])
+        assert_true(result[0]["unattended_install"])
+        assert_list_equal(result[0]["catalogs"], ["production"])
+
+        # Leif is feeling good, so he tries a bunch of files.
+        args = ["release", self.test_date] + 2 * [self.test_file]
+        result = self.get_phasetool_results(args)
+        assert_equal(self.test_datetime, result[0]["force_install_after_date"])
+        assert_true(result[0]["unattended_install"])
+        assert_list_equal(result[0]["catalogs"], ["production"])
+        assert_equal(self.test_datetime, result[1]["force_install_after_date"])
+        assert_true(result[1]["unattended_install"])
+        assert_list_equal(result[1]["catalogs"], ["production"])
+
+        # Leif decides typing all of those filenames in is no fun, and
+        # decides to try passing a filename that contains pkginfo paths.
+        mock_files = [self.test_file]
+        mock_file_list = mock.patch("phasetool.get_pkginfo_from_file",
+                                    return_value=mock_files)
+        mock_file_list.start()
+        args = ["release", self.test_date, "file list"]
+        result = self.get_phasetool_results(args)
+        mock_file_list.stop()
+
+        assert_equal(self.test_datetime, result[0]["force_install_after_date"])
+        assert_true(result[0]["unattended_install"])
+        assert_list_equal(result[0]["catalogs"], ["production"])
 
     @mock.patch("phasetool.write_collection_results", autospec=True)
     def test_collect_updates(self, mock_repo):
