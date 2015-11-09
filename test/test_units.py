@@ -92,6 +92,10 @@ class TestPrepareUnits(object):
 class TestCollectUnits(object):
     """Test the collection units."""
 
+
+    def test_get_catalogs_no_repo(self):
+        assert_raises(SystemExit, phasetool.get_catalogs, "/null")
+
     def test_get_catalogs(self):
         catalogs = phasetool.get_catalogs("test/resources/repo")
         catalog_names = set(catalogs.keys())
@@ -100,3 +104,4 @@ class TestCollectUnits(object):
         assert_not_in("production", catalog_names)
         assert_set_equal({"testing", "phase1", "phase2", "phase3"},
                          catalog_names)
+
