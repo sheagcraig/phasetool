@@ -88,6 +88,23 @@ def collect(args):
     """Collect available updates into markdown for presentation."""
     pass
 
+def get_catalogs(repo_path):
+    """Build a dictionary of non-prod catalogs and their contents."""
+    catalogs = {}
+
+    if not os.path.exists(repo_path):
+        sys.exit("Please mount your repo!")
+
+    # TODO (Shea): this should be a preference.
+    testing_catalogs = {"development", "testing", "phase1", "phase2", "phase3"}
+
+    for catalog in testing_catalogs:
+        cat_path = os.path.join(repo_path, "catalogs", catalog)
+        if os.path.exists(cat_path):
+            catalogs[catalog] = plistlib.readPlist(cat_path)
+
+    return catalogs
+
 
 def write_collection_results(markdown_data, path):
     """Write markdown data string to path."""

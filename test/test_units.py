@@ -77,5 +77,10 @@ class TestCollectUnits(object):
     """Test the collection units."""
 
     def test_get_catalogs(self):
-        catalogs = phasetool.get_catalogs("test/resources/repo/catalogs")
-        # TODO
+        catalogs = phasetool.get_catalogs("test/resources/repo")
+        catalog_names = set(catalogs.keys())
+        # This assumes we want to include ALL updates in phase testing
+        # except those in production.
+        assert_not_in("production", catalog_names)
+        assert_set_equal({"testing", "phase1", "phase2", "phase3"},
+                         catalog_names)
