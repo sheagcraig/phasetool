@@ -42,6 +42,16 @@ class TestGlobalUnits(object):
 
         # TODO: add test for no argument.
 
+    def test_is_valid_date(self):
+        test_date = "2011-08-03T13:00:00Z"
+        invalid_test_dates = ("Both how I'm livin' and my nose are large.",
+                              "2011-08-0313:00:00", "February 15th, 2015",
+                              "101015")
+        assert_true(phasetool.is_valid_date(test_date))
+        for invalid_date in invalid_test_dates:
+            assert_false(phasetool.is_valid_date(invalid_date))
+
+
 class TestPrepareUnits(object):
     """Test the phasetool prepare units."""
 
