@@ -55,21 +55,39 @@ def build_argparser():
     collect_parser = subparser.add_parser("collect", help=phelp)
     collect_parser.set_defaults(func=collect)
 
-    # Set Pkginfo arguments
-    phelp = ("Set the force_install_after_date key and value for any number "
-             "of pkginfo files")
-    pkginfo_parser = subparser.add_parser("prepare", help=phelp)
+    # Prepare arguments
+    phelp = ("Set the force_install_after_date and unattended_install value "
+             "for any number of pkginfo files to be phase tested.")
+    prepare_parser = subparser.add_parser("prepare", help=phelp)
     phelp = (
         "Date to use as the value for force_install_after_date. Format is: "
         "'yyyy-mm-ddThh:mm:ssZ'. For example, August 3rd 2011 at 1PM is the "
         "following: '2011-08-03T13:00:00Z'. OR, use a blank string (i.e. '') "
         "to remove the force_install_after_date key/value pair.")
-    pkginfo_parser.add_argument("date", help=phelp)
+    prepare_parser.add_argument("date", help=phelp)
+    phelp = "Catalog to set on pkginfo files."
+    prepare_parser.add_argument("phase", help=phelp)
     phelp = ("Any number of paths to pkginfo files to update, or a path to a "
              "file to use for input. Format should have one path per line, "
              "with comments allowed.")
-    pkginfo_parser.add_argument("pkginfo", help=phelp, nargs="*")
-    pkginfo_parser.set_defaults(func=prepare)
+    prepare_parser.add_argument("pkginfo", help=phelp, nargs="*")
+    prepare_parser.set_defaults(func=prepare)
+
+    # release subcommand
+    phelp = ("Set the force_install_after_date and unattended_install for any "
+             "number of pkginfo files to be released to production.")
+    release_parser = subparser.add_parser("release", help=phelp)
+    phelp = (
+        "Date to use as the value for force_install_after_date. Format is: "
+        "'yyyy-mm-ddThh:mm:ssZ'. For example, August 3rd 2011 at 1PM is the "
+        "following: '2011-08-03T13:00:00Z'. OR, use a blank string (i.e. '') "
+        "to remove the force_install_after_date key/value pair.")
+    release_parser.add_argument("date", help=phelp)
+    phelp = ("Any number of paths to pkginfo files to update, or a path to a "
+             "file to use for input. Format should have one path per line, "
+             "with comments allowed.")
+    release_parser.add_argument("pkginfo", help=phelp, nargs="*")
+    release_parser.set_defaults(func=release)
 
     return parser
 
@@ -134,6 +152,33 @@ def prepare(args):
             pkginfo = plistlib.readPlist(path)
             set_force_install_after_date(date, pkginfo)
             set_unattended_install(False, pkginfo)
+            set_catalog(args.phase, pkginfo)
+            plistlib.writePlist(pkginfo, path)
+
+
+def release(args):
+    """Set keys relevent to production deployment."""
+    if (len(args.pkginfo) is 1 and
+            not args.pkginfo[0].endswith((".plist", ".pkginfo"))):
+        # File input
+        paths_to_change = get_pkginfo_from_file(args.pkginfo[0])
+    else:
+        paths_to_change = args.pkginfo
+
+    if not args.date:
+        date = None
+    elif not is_valid_date(args.date):
+        print "Invalid date! Please check formatting."
+        sys.exit(1)
+    else:
+        date = get_datetime(args.date)
+
+    for path in paths_to_change:
+        if os.path.exists(path):
+            pkginfo = plistlib.readPlist(path)
+            set_force_install_after_date(date, pkginfo)
+            set_unattended_install(True, pkginfo)
+            set_catalog("production", pkginfo)
             plistlib.writePlist(pkginfo, path)
 
 
@@ -192,6 +237,19 @@ def set_unattended_install(val, pkginfo):
         pkginfo (plist): File to on which to change date.
     """
     set_key("unattended_install", val, pkginfo)
+
+
+def set_catalog(val, pkginfo):
+    """Set the catalog value to val, clearing other entries.
+
+    Args:
+        val (string): Catalog to set.
+        pkginfo (plist): File to on which to change date.
+    """
+    catalogs = []
+    if val:
+        catalogs.append(val)
+    set_key("catalogs", [val], pkginfo)
 
 
 def set_key(key, val, pkginfo):
