@@ -26,8 +26,13 @@ import argparse
 import datetime
 import os
 import sys
+from xml.parsers.expat import ExpatError
 
 import plistlib
+
+
+# TODO: Get this from Munki preferences.
+PKGINFO_EXTENSIONS = (".pkginfo", ".plist")
 
 
 def main():
@@ -103,8 +108,37 @@ def get_munki_repo(args):
 
 
 def collect(args):
-    """Collect available updates into markdown for presentation."""
-    pass
+    """Collect available updates."""
+    catalogs = get_catalogs(args.repo)
+    testing_updates = {}
+    for cat_name, catalog in catalogs.items():
+        for pkginfo in catalog:
+            # import pdb;pdb.set_trace()
+            record_name = "{} {}".format(pkginfo["name"], pkginfo["version"])
+            if record_name in testing_updates:
+                print ("WARNING: Update {} with filename {} is in the repo "
+                        "more than once!".format(
+                            record_name, pkginfo["installer_item_location"]))
+
+            pkginfo_data = {}
+            pkginfo_data["name"] = pkginfo["name"]
+            pkginfo_data["display_name"] = pkginfo.get("display_name")
+            pkginfo_data["version"] = pkginfo["version"]
+            pkginfo_data["catalog"] = ", ".join(pkginfo.get("catalogs"))
+            pkginfo_data["category"] = pkginfo.get("category")
+            pkginfo_data["description"] = pkginfo.get("description")
+            pkginfo_data["developer"] = pkginfo.get("developer")
+            pkginfo_data["installer_item_location"] = (
+                pkginfo["installer_item_location"])
+            pkginfo_data["pkginfo_path"] = find_pkginfo_file_in_repo(
+                pkginfo, args.repo)
+            if record_name in testing_updates:
+                record_name += pkginfo_data["pkginfo_path"]
+            testing_updates[record_name] = pkginfo_data
+
+    write_markdown(testing_updates, "phase_testing.md")
+    write_path_list(testing_updates, "phase_testing_files.txt")
+
 
 def get_catalogs(repo_path):
     """Build a dictionary of non-prod catalogs and their contents."""
@@ -124,10 +158,52 @@ def get_catalogs(repo_path):
     return catalogs
 
 
-def write_collection_results(markdown_data, path):
+def find_pkginfo_file_in_repo(pkginfo, repo):
+    """Find the pkginfo file that matches the input in the repo."""
+    # TODO: Wow is this slow.
+    pkginfo_dir = os.path.join(repo, "pkgsinfo")
+    cmp_keys = ("name", "version", "installer_item_location")
+    for dirpath, dirnames, filenames in os.walk(pkginfo_dir):
+        for file in filter(is_pkginfo, filenames):
+            try:
+                path = os.path.join(dirpath, file)
+                pkginfo_file = plistlib.readPlist(path)
+            except ExpatError:
+                continue
+            if all(pkginfo[key] == pkginfo_file.get(key) for key in cmp_keys):
+                return path
+
+
+def is_pkginfo(candidate):
+    return os.path.splitext(candidate)[-1].lower() in PKGINFO_EXTENSIONS
+
+
+def write_markdown(data, path):
     """Write markdown data string to path."""
+    # TODO: Add template stuff.
+    output = [u"## {} Phase Testing Updates\n".format("November")]
+    for item_name, item_val in sorted(data.items()):
+        output.append(u"- {} {}".format(item_val["display_name"] or
+                                        item_val["name"], item_val["version"]))
+        # for key in item_val:
+        #     if item_val[key] and key not in (
+        #             "installer_item_location", "name", "version",
+        #             "pkginfo_path", "display_name"):
+        #         output.append(u"    - {}: {}".format(key, item_val[key]))
+    output_string = u"\n".join(output).encode("utf-8")
     with open(path, "w") as markdown_file:
-        markdown_file.write(path)
+        markdown_file.write(output_string)
+
+
+def write_path_list(data, path):
+    """Write pkginfo path data to path."""
+    output = []
+    for pkginfo in data:
+        output.append(data[pkginfo]["pkginfo_path"])
+
+    output_string = u"\n".join(output).encode("utf-8")
+    with open(path, "w") as path_file:
+        path_file.write(output_string)
 
 
 def prepare(args):
