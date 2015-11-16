@@ -129,12 +129,13 @@ class TestPhaseTool(object):
         assert_true(result[0]["unattended_install"])
         assert_list_equal(result[0]["catalogs"], ["production"])
 
-    @mock.patch("phasetool.write_collection_results", autospec=True)
+    @mock.patch("phasetool.write_file", autospec=True)
     def test_collect_updates(self, mock_repo):
         """Test collecting updates from a repo for phase testing."""
-        expected_result = ("# Phase Testing Updates\n"
-                           "### Apple Updates\n- xyzzy\n\n"
-                           "### 3rd Party Updates\n- Crypt 0.7.2")
+        expected_result = ("## November Phase Testing Updates\n\n"
+                           "- Crypt - enables FileVault encryption 0.7.2\n"
+                           "- Crypt - enables FileVault encryption 0.7.2\n"
+                           "- Crypt - enables FileVault encryption 1.5.0")
         # Leif is testing the collection of updates to see what it
         # finds
         sys.argv = build_args(["collect"])

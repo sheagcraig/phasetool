@@ -191,6 +191,10 @@ def write_markdown(data, path):
         #             "pkginfo_path", "display_name"):
         #         output.append(u"    - {}: {}".format(key, item_val[key]))
     output_string = u"\n".join(output).encode("utf-8")
+    write_file(output_string, path)
+
+
+def write_file(output_string, path):
     with open(path, "w") as markdown_file:
         markdown_file.write(output_string)
 
