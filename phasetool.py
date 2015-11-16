@@ -194,11 +194,6 @@ def write_markdown(data, path):
     write_file(output_string, path)
 
 
-def write_file(output_string, path):
-    with open(path, "w") as markdown_file:
-        markdown_file.write(output_string)
-
-
 def write_path_list(data, path):
     """Write pkginfo path data to path."""
     output = []
@@ -206,8 +201,13 @@ def write_path_list(data, path):
         output.append(data[pkginfo]["pkginfo_path"])
 
     output_string = u"\n".join(output).encode("utf-8")
-    with open(path, "w") as path_file:
-        path_file.write(output_string)
+    write_file(output_string, path)
+
+
+def write_file(output_string, path):
+    """Write output_string to path."""
+    with open(path, "w") as markdown_file:
+        markdown_file.write(output_string)
 
 
 def prepare(args):

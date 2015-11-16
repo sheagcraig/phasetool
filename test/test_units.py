@@ -105,3 +105,14 @@ class TestCollectUnits(object):
         assert_set_equal({"testing", "phase1", "phase2", "phase3"},
                          catalog_names)
 
+    @mock.patch("phasetool.write_file", )
+    def test_write_path_list(self, mock_write_file):
+        devnull = "/dev/null"
+        test_data = {"TEST": {"pkginfo_path": devnull}}
+        phasetool.write_path_list(test_data, devnull)
+        assert_equal(mock_write_file.call_args[0][0], devnull)
+        test_data = {"TEST": {"pkginfo_path": devnull + u"\U0001F49A\n"}}
+        phasetool.write_path_list(test_data, devnull)
+        assert_equal(mock_write_file.call_args[0][0], devnull +
+                     "\xf0\x9f\x92\x9a\x0a")
+
