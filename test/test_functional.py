@@ -138,9 +138,9 @@ class TestPhaseTool(object):
                            "- Crypt - enables FileVault encryption 1.5.0")
         # Leif is testing the collection of updates to see what it
         # finds
-        sys.argv = build_args(["collect"])
+        sys.argv = build_args(["--repo", "test/resources/repo", "collect"])
         phasetool.main()
-        result_content = mock_repo.call_args[0][0]
+        result_content = mock_repo.call_args_list[0][0][0]
         assert_equal(expected_result, result_content)
 
     @mock.patch("phasetool.plistlib.writePlist", autospec=True)

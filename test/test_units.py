@@ -35,10 +35,11 @@ class TestGlobalUnits(object):
 
             def __init__(self):
                 self.repo = "/tmp"
+                self.repo_url = "AFP"
 
         mock_args = MockArgs()
         result = phasetool.get_munki_repo(mock_args)
-        assert_equal("/tmp", result)
+        assert_equal(("/tmp", "AFP"), result)
 
         # TODO: add test for no argument.
 

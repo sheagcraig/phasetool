@@ -120,12 +120,17 @@ def build_argparser():
 
 def get_munki_repo(args):
     """Use cli arg for repo, otherwise, get from munkiimport prefs."""
+    prefs = read_plist(
+        "~/Library/Preferences/com.googlecode.munki.munkiimport.plist")
     if args.repo:
-        return args.repo
+        repo = args.repo
     else:
-        prefs = read_plist(
-            "~/Library/Preferences/com.googlecode.munki.munkiimport.plist")
-        return (prefs.get("repo_path"), prefs.get("repo_url"))
+        repo = prefs.get("repo_path")
+    if args.repo_url:
+        repo_url = args.repo_url
+    else:
+        repo_url = prefs.get("repo_url")
+    return (repo, repo_url)
 
 
 def read_plist(path):
@@ -135,6 +140,7 @@ def read_plist(path):
 def collect(args):
     """Collect available updates."""
     catalogs = get_catalogs(args.repo, args.repo_url)
+    cache = build_pkginfo_cache(args.repo)
     testing_updates = {}
     for cat_name, catalog in catalogs.items():
         for pkginfo in catalog:
@@ -157,7 +163,7 @@ def collect(args):
                 pkginfo_data["installer_item_location"] = (
                     pkginfo.get("installer_item_location"))
                 pkginfo_data["pkginfo_path"] = find_pkginfo_file_in_repo(
-                    pkginfo, args.repo)
+                    pkginfo, cache)
                 if record_name in testing_updates:
                     record_name += pkginfo_data["pkginfo_path"]
                 testing_updates[record_name] = pkginfo_data
@@ -203,21 +209,43 @@ def not_placeholder(record_name):
     return not record_name.upper().startswith("PLACEHOLDER")
 
 
-def find_pkginfo_file_in_repo(pkginfo, repo):
+def find_pkginfo_file_in_repo(pkginfo, pkginfos):
     """Find the pkginfo file that matches the input in the repo."""
-    # TODO: Wow is this slow.
-    pkginfo_dir = os.path.join(repo, "pkgsinfo")
     cmp_keys = ("name", "version", "installer_item_location")
+    name = pkginfo["name"]
+    version = pkginfo["version"]
+    installer = pkginfo.get("installer_item_location")
+    candidate_keys = (key for key in pkginfos if name in key and version in
+                      key)
+
+    for candidate_key in candidate_keys:
+        pkginfo_file = pkginfos[candidate_key]
+        if all(pkginfo.get(key) == pkginfo_file.get(key) for key in cmp_keys):
+            return candidate_key
+
+    # Brute force if we haven't found one yet.
+    for pkg_key in pkginfos:
+        pkginfo_file = pkginfos[pkg_key]
+        if all(pkginfo.get(key) == pkginfo_file.get(key) for key in cmp_keys):
+            return pkg_key
+
+    return None
+
+
+def build_pkginfo_cache(repo):
+    pkginfos = {}
+    pkginfo_dir = os.path.join(repo, "pkgsinfo")
     for dirpath, dirnames, filenames in os.walk(pkginfo_dir):
         for file in filter(is_pkginfo, filenames):
             try:
                 path = os.path.join(dirpath, file)
-                pkginfo_file = read_plist(path)
+                pkginfo_file = plistlib.readPlist(path)
             except ExpatError:
                 continue
-            if all(pkginfo.get(key) == pkginfo_file.get(key) for key in
-                   cmp_keys):
-                return path
+
+            pkginfos[os.path.join(dirpath, file)] = pkginfo_file
+
+    return pkginfos
 
 
 def is_pkginfo(candidate):
