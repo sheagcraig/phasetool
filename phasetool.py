@@ -25,10 +25,14 @@ and unattended_install value of False.
 import argparse
 import datetime
 import os
+import plistlib
 import sys
 from xml.parsers.expat import ExpatError
 
-import plistlib
+try:
+    import mount_shares_better
+except ImportError:
+    mount_shares_better = None
 
 
 # TODO: Get this from Munki preferences.
@@ -39,7 +43,7 @@ def main():
     """Build and parse args, and then kick-off action function."""
     parser = build_argparser()
     args = parser.parse_args()
-    args.repo = get_munki_repo(args)
+    args.repo, args.repo_url = get_munki_repo(args)
     args.func(args)
 
 
@@ -52,6 +56,8 @@ def build_argparser():
     # Global arguments
     parser.add_argument("-r", "--repo", help="Path to Munki repo. Will use "
                         "munkiimport's configured repo if not specified.")
+    parser.add_argument("-u", "--repo_url", help="Full mount URL to Munki "
+                        "repo. Will attempt to mount if the share is missing.")
 
     subparser = parser.add_subparsers(help="Sub-command help")
 
@@ -117,14 +123,18 @@ def get_munki_repo(args):
     if args.repo:
         return args.repo
     else:
-        prefs = plistlib.readPlist(os.path.expanduser(
-            "~/Library/Preferences/com.googlecode.munki.munkiimport.plist"))
-        return prefs.get("repo_path")
+        prefs = read_plist(
+            "~/Library/Preferences/com.googlecode.munki.munkiimport.plist")
+        return (prefs.get("repo_path"), prefs.get("repo_url"))
+
+
+def read_plist(path):
+    return plistlib.readPlist(os.path.expanduser(path))
 
 
 def collect(args):
     """Collect available updates."""
-    catalogs = get_catalogs(args.repo)
+    catalogs = get_catalogs(args.repo, args.repo_url)
     testing_updates = {}
     for cat_name, catalog in catalogs.items():
         for pkginfo in catalog:
@@ -156,12 +166,12 @@ def collect(args):
     write_path_list(testing_updates, "phase_testing_files.txt")
 
 
-def get_catalogs(repo_path):
+def get_catalogs(repo_path, repo_url):
     """Build a dictionary of non-prod catalogs and their contents."""
     catalogs = {}
 
-    if not os.path.exists(repo_path):
-        sys.exit("Please mount your repo!")
+    if not mounted(repo_path):
+        repo_path = mount(repo_url)
 
     # TODO (Shea): this should be a preference.
     testing_catalogs = {"development", "testing", "phase1", "phase2", "phase3"}
@@ -169,9 +179,24 @@ def get_catalogs(repo_path):
     for catalog in testing_catalogs:
         cat_path = os.path.join(repo_path, "catalogs", catalog)
         if os.path.exists(cat_path):
-            catalogs[catalog] = plistlib.readPlist(cat_path)
+            catalogs[catalog] = read_plist(cat_path)
 
     return catalogs
+
+
+def mounted(path):
+    return os.path.exists(path)
+
+
+def mount(path):
+    # Mac only at the moment!
+    if not os.uname()[0] == "Darwin":
+        raise OSError("Unsupported OS.")
+    try:
+        mount_location = mount_shares_better.mount_share(path)
+    except mount_shares_better.MountException as error:
+        print error.message
+        mount_location = None
 
 
 def not_placeholder(record_name):
@@ -187,7 +212,7 @@ def find_pkginfo_file_in_repo(pkginfo, repo):
         for file in filter(is_pkginfo, filenames):
             try:
                 path = os.path.join(dirpath, file)
-                pkginfo_file = plistlib.readPlist(path)
+                pkginfo_file = read_plist(path)
             except ExpatError:
                 continue
             if all(pkginfo.get(key) == pkginfo_file.get(key) for key in
@@ -250,7 +275,7 @@ def prepare(args):
 
     for path in paths_to_change:
         if os.path.exists(path):
-            pkginfo = plistlib.readPlist(path)
+            pkginfo = read_plist(path)
             set_force_install_after_date(date, pkginfo)
             set_unattended_install(False, pkginfo)
             set_catalog(args.phase, pkginfo)
@@ -276,7 +301,7 @@ def release(args):
 
     for path in paths_to_change:
         if os.path.exists(path):
-            pkginfo = plistlib.readPlist(path)
+            pkginfo = read_plist(path)
             set_force_install_after_date(date, pkginfo)
             set_unattended_install(True, pkginfo)
             set_catalog("production", pkginfo)
@@ -294,7 +319,7 @@ def bulk(args):
 
     for path in paths_to_change:
         if os.path.exists(path):
-            pkginfo = plistlib.readPlist(path)
+            pkginfo = read_plist(path)
             if args.val == "-":
                 remove_key(args.key, pkginfo)
             else:

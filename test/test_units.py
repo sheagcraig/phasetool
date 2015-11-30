@@ -92,18 +92,20 @@ class TestPrepareUnits(object):
 class TestCollectUnits(object):
     """Test the collection units."""
 
-
-    def test_get_catalogs_no_repo(self):
-        assert_raises(SystemExit, phasetool.get_catalogs, "/null")
-
     def test_get_catalogs(self):
-        catalogs = phasetool.get_catalogs("test/resources/repo")
+        catalogs = phasetool.get_catalogs("test/resources/repo", "None")
         catalog_names = set(catalogs.keys())
         # This assumes we want to include ALL updates in phase testing
         # except those in production.
         assert_not_in("production", catalog_names)
         assert_set_equal({"testing", "phase1", "phase2", "phase3"},
                          catalog_names)
+
+    @mock.patch("phasetool.mount")
+    def test_get_catalogs_not_mounted(self, mock_mount):
+        mock_mount.return_value = "/DoesNotExist"
+        _ = phasetool.get_catalogs("FailurePath", "None")
+        mock_mount.assert_any_call("None")
 
     @mock.patch("phasetool.write_file", )
     def test_write_path_list(self, mock_write_file):
