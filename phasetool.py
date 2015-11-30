@@ -56,7 +56,9 @@ def build_argparser():
     subparser = parser.add_subparsers(help="Sub-command help")
 
     # Collect arguments
-    phelp = "Collect available updates and generate markdown listing."
+    phelp = ("Collect available updates and generate markdown listing. "
+             "Product names that begin with 'Placeholder' (case-insensitive) "
+             "will be ignored.")
     collect_parser = subparser.add_parser("collect", help=phelp)
     collect_parser.set_defaults(func=collect)
 
@@ -133,21 +135,22 @@ def collect(args):
                         "more than once!".format(
                             record_name, pkginfo["installer_item_location"]))
 
-            pkginfo_data = {}
-            pkginfo_data["name"] = pkginfo["name"]
-            pkginfo_data["display_name"] = pkginfo.get("display_name")
-            pkginfo_data["version"] = pkginfo["version"]
-            pkginfo_data["catalog"] = ", ".join(pkginfo.get("catalogs"))
-            pkginfo_data["category"] = pkginfo.get("category")
-            pkginfo_data["description"] = pkginfo.get("description")
-            pkginfo_data["developer"] = pkginfo.get("developer")
-            pkginfo_data["installer_item_location"] = (
-                pkginfo["installer_item_location"])
-            pkginfo_data["pkginfo_path"] = find_pkginfo_file_in_repo(
-                pkginfo, args.repo)
-            if record_name in testing_updates:
-                record_name += pkginfo_data["pkginfo_path"]
-            testing_updates[record_name] = pkginfo_data
+            if not_placeholder(record_name):
+                pkginfo_data = {}
+                pkginfo_data["name"] = pkginfo["name"]
+                pkginfo_data["display_name"] = pkginfo.get("display_name")
+                pkginfo_data["version"] = pkginfo["version"]
+                pkginfo_data["catalog"] = ", ".join(pkginfo.get("catalogs"))
+                pkginfo_data["category"] = pkginfo.get("category")
+                pkginfo_data["description"] = pkginfo.get("description")
+                pkginfo_data["developer"] = pkginfo.get("developer")
+                pkginfo_data["installer_item_location"] = (
+                    pkginfo.get("installer_item_location"))
+                pkginfo_data["pkginfo_path"] = find_pkginfo_file_in_repo(
+                    pkginfo, args.repo)
+                if record_name in testing_updates:
+                    record_name += pkginfo_data["pkginfo_path"]
+                testing_updates[record_name] = pkginfo_data
 
     write_markdown(testing_updates, "phase_testing.md")
     write_path_list(testing_updates, "phase_testing_files.txt")
@@ -171,6 +174,10 @@ def get_catalogs(repo_path):
     return catalogs
 
 
+def not_placeholder(record_name):
+    return not record_name.upper().startswith("PLACEHOLDER")
+
+
 def find_pkginfo_file_in_repo(pkginfo, repo):
     """Find the pkginfo file that matches the input in the repo."""
     # TODO: Wow is this slow.
@@ -183,7 +190,8 @@ def find_pkginfo_file_in_repo(pkginfo, repo):
                 pkginfo_file = plistlib.readPlist(path)
             except ExpatError:
                 continue
-            if all(pkginfo[key] == pkginfo_file.get(key) for key in cmp_keys):
+            if all(pkginfo.get(key) == pkginfo_file.get(key) for key in
+                   cmp_keys):
                 return path
 
 

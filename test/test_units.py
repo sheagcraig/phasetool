@@ -116,3 +116,8 @@ class TestCollectUnits(object):
         assert_equal(mock_write_file.call_args[0][0], devnull +
                      "\xf0\x9f\x92\x9a\x0a")
 
+    def test_not_placeholder(self):
+        placeholder = "Placeholder-Testing-1.3"
+        assert_false(phasetool.not_placeholder(placeholder))
+        not_a_placeholder = "TacoParty-1.3"
+        assert(phasetool.not_placeholder(not_a_placeholder))
