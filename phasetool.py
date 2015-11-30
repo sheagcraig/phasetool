@@ -94,6 +94,19 @@ def build_argparser():
     release_parser.add_argument("pkginfo", help=phelp, nargs="*")
     release_parser.set_defaults(func=release)
 
+    # bulk subcommand
+    phelp = "Set a top-level key on any number of pkginfo files."
+    bulk_parser = subparser.add_parser("bulk", help=phelp)
+    phelp = "Key to set."
+    bulk_parser.add_argument("key", help=phelp)
+    phelp = "Value to set on key, or '-' (literal hyphen) to remove the key."
+    bulk_parser.add_argument("val", help=phelp)
+    phelp = ("Any number of paths to pkginfo files to update, or a path to a "
+             "file to use for input. Format should have one path per line, "
+             "with comments allowed.")
+    bulk_parser.add_argument("pkginfo", help=phelp, nargs="*")
+    bulk_parser.set_defaults(func=bulk)
+
     return parser
 
 
@@ -259,6 +272,25 @@ def release(args):
             set_force_install_after_date(date, pkginfo)
             set_unattended_install(True, pkginfo)
             set_catalog("production", pkginfo)
+            plistlib.writePlist(pkginfo, path)
+
+
+def bulk(args):
+    """Set a key on multiple pkginfo files."""
+    if (len(args.pkginfo) is 1 and
+            not args.pkginfo[0].endswith((".plist", ".pkginfo"))):
+        # File input
+        paths_to_change = get_pkginfo_from_file(args.pkginfo[0])
+    else:
+        paths_to_change = args.pkginfo
+
+    for path in paths_to_change:
+        if os.path.exists(path):
+            pkginfo = plistlib.readPlist(path)
+            if args.val == "-":
+                remove_key(args.key, pkginfo)
+            else:
+                set_key(args.key, args.val, pkginfo)
             plistlib.writePlist(pkginfo, path)
 
 
