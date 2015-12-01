@@ -37,6 +37,8 @@ except ImportError:
 
 # TODO: Get this from Munki preferences.
 PKGINFO_EXTENSIONS = (".pkginfo", ".plist")
+# TODO (Shea): this should be a preference.
+TESTING_CATALOGS = {"development", "testing", "phase1", "phase2", "phase3"}
 
 
 def main():
@@ -137,40 +139,51 @@ def read_plist(path):
 
 def collect(args):
     """Collect available updates."""
-    catalogs = get_catalogs(args.repo, args.repo_url)
-    cache = build_pkginfo_cache(args.repo)
-    testing_updates = {}
-    for cat_name, catalog in catalogs.items():
-        for pkginfo in catalog:
-            # import pdb;pdb.set_trace()
-            record_name = "{} {}".format(pkginfo["name"], pkginfo["version"])
-            if record_name in testing_updates:
-                print ("WARNING: Update {} with filename {} is in the repo "
-                        "more than once!".format(
-                            record_name, pkginfo["installer_item_location"]))
+    pkginfos = get_testing_pkginfos()
+    # catalogs = get_catalogs(args.repo)
+    # cache = build_pkginfo_cache(args.repo)
+    # testing_updates = {}
+    # for cat_name, catalog in catalogs.items():
+    #     for pkginfo in catalog:
+    #         record_name = "{} {}".format(pkginfo["name"], pkginfo["version"])
+    #         if record_name in testing_updates:
+    #             print ("WARNING: Update {} with filename {} is in the repo "
+    #                     "more than once!".format(
+    #                         record_name, pkginfo["installer_item_location"]))
+    #             record_name += pkginfo.get("installer_item_location")
 
-            if not_placeholder(record_name):
-                pkginfo_data = {}
-                pkginfo_data["name"] = pkginfo["name"]
-                pkginfo_data["display_name"] = pkginfo.get("display_name")
-                pkginfo_data["version"] = pkginfo["version"]
-                pkginfo_data["catalog"] = ", ".join(pkginfo.get("catalogs"))
-                pkginfo_data["category"] = pkginfo.get("category")
-                pkginfo_data["description"] = pkginfo.get("description")
-                pkginfo_data["developer"] = pkginfo.get("developer")
-                pkginfo_data["installer_item_location"] = (
-                    pkginfo.get("installer_item_location"))
-                pkginfo_data["pkginfo_path"] = find_pkginfo_file_in_repo(
-                    pkginfo, cache)
-                if record_name in testing_updates:
-                    record_name += pkginfo_data["pkginfo_path"]
-                testing_updates[record_name] = pkginfo_data
+    #         if not_placeholder(record_name):
+    #             testing_updates[record_name] = get_pkginfo_data(
+    #                 pkginfo, cache)
 
-    write_markdown(testing_updates, "phase_testing.md")
-    write_path_list(testing_updates, "phase_testing_files.txt")
+    # write_markdown(testing_updates, "phase_testing.md")
+    # write_path_list(testing_updates, "phase_testing_files.txt")
 
 
-def get_catalogs(repo_path, repo_url):
+def get_testing_pkginfos(repo):
+    pkginfos = {}
+    pkginfo_dir = os.path.join(repo, "pkgsinfo")
+    for dirpath, dirnames, filenames in os.walk(pkginfo_dir):
+        for file in filter(is_pkginfo, filenames):
+            try:
+                path = os.path.join(dirpath, file)
+                pkginfo_file = read_plist(path)
+            except ExpatError:
+                continue
+
+            if (is_testing(pkginfo_file) and
+                not_placeholder(pkginfo_file.get("name"))):
+                pkginfos[path] = pkginfo_file
+
+    return pkginfos
+
+
+def is_testing(pkginfo):
+    catalogs = pkginfo.get("catalogs")
+    return any(catalog in TESTING_CATALOGS for catalog in catalogs)
+
+
+def get_catalogs(repo_path):
     """Build a dictionary of non-prod catalogs and their contents."""
     catalogs = {}
 
@@ -204,24 +217,24 @@ def not_placeholder(record_name):
     return not record_name.upper().startswith("PLACEHOLDER")
 
 
-def find_pkginfo_file_in_repo(pkginfo, pkginfos):
+def find_pkginfo_file_in_repo(target, pkginfos):
     """Find the pkginfo file that matches the input in the repo."""
     cmp_keys = ("name", "version", "installer_item_location")
-    name = pkginfo["name"]
-    version = pkginfo["version"]
-    installer = pkginfo.get("installer_item_location")
+    name = target["name"]
+    version = target["version"]
+    installer = target.get("installer_item_location")
     candidate_keys = (key for key in pkginfos if name in key and version in
                       key)
 
     for candidate_key in candidate_keys:
         pkginfo_file = pkginfos[candidate_key]
-        if all(pkginfo.get(key) == pkginfo_file.get(key) for key in cmp_keys):
+        if all(target.get(key) == pkginfo_file.get(key) for key in cmp_keys):
             return candidate_key
 
     # Brute force if we haven't found one yet.
     for pkg_key in pkginfos:
         pkginfo_file = pkginfos[pkg_key]
-        if all(pkginfo.get(key) == pkginfo_file.get(key) for key in cmp_keys):
+        if all(target.get(key) == pkginfo_file.get(key) for key in cmp_keys):
             return pkg_key
 
     return None
@@ -245,6 +258,17 @@ def build_pkginfo_cache(repo):
 
 def is_pkginfo(candidate):
     return os.path.splitext(candidate)[-1].lower() in PKGINFO_EXTENSIONS
+
+
+def get_pkginfo_data(pkginfo, cache):
+    """Return a dictionary of useful data relating to pkginfo."""
+    keys = ("name", "display_name", "version", "category", "description",
+            "developer", "installer_item_location")
+    pkginfo_data = {key: pkginfo[key] for key in keys}
+    pkginfo_data["catalog"] = ", ".join(pkginfo.get("catalogs"))
+    pkginfo_data["pkginfo_path"] = find_pkginfo_file_in_repo(
+        pkginfo, cache)
+    return pkginfo_data
 
 
 def write_markdown(data, path):

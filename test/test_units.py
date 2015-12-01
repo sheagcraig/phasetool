@@ -18,8 +18,8 @@
 """Unit tests for phasetool."""
 
 
-import copy
 import datetime
+import os
 
 import mock
 from nose.tools import *  # pylint: disable=unused-wildcard-import, wildcard-import
@@ -109,14 +109,23 @@ class TestPrepareUnits(object):
 class TestCollectUnits(object):
     """Test the collection units."""
 
-    def test_get_catalogs(self):
-        catalogs = phasetool.get_catalogs("test/resources/repo", "None")
-        catalog_names = set(catalogs.keys())
-        # This assumes we want to include ALL updates in phase testing
-        # except those in production.
-        assert_not_in("production", catalog_names)
-        assert_set_equal({"testing", "phase1", "phase2", "phase3"},
-                         catalog_names)
+    def test_get_testing_pkginfos(self):
+        repo = "test/resources/repo"
+        pkginfos = phasetool.get_testing_pkginfos(repo).keys()
+        expected = [os.path.join("test/resources/repo/pkgsinfo", filename) for
+                    filename in ["Crypt-0.8.0.pkginfo", "Crypt-0.9.0.pkginfo",
+                                 "Crypt-1.0.0.pkginfo", "Crypt-1.5.0.pkginfo"]]
+        assert_list_equal(sorted(expected), sorted(pkginfos))
+
+
+    # def test_get_catalogs(self):
+    #     catalogs = phasetool.get_catalogs("test/resources/repo", "None")
+    #     catalog_names = set(catalogs.keys())
+    #     # This assumes we want to include ALL updates in phase testing
+    #     # except those in production.
+    #     assert_not_in("production", catalog_names)
+    #     assert_set_equal({"testing", "phase1", "phase2", "phase3"},
+    #                      catalog_names)
 
     @mock.patch("phasetool.write_file", )
     def test_write_path_list(self, mock_write_file):
