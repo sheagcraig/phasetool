@@ -56,7 +56,7 @@ class TestGlobalUnits(object):
 class TestPrepareUnits(object):
     """Test the phasetool prepare units."""
 
-    def __init__(self):
+    def setUp(self):
         self.test_plist = phasetool.plistlib.readPlist(
             "test/resources/repo/pkgsinfo/Crypt-0.7.2.pkginfo")
         self.test_date = "2011-08-03T13:00:00Z"
@@ -65,29 +65,25 @@ class TestPrepareUnits(object):
 
     def test_set_install_after_date(self):
         """Set a date."""
-        target_plist = copy.deepcopy(self.test_plist)
         phasetool.set_force_install_after_date(
-            self.test_datetime, target_plist)
-        assert_equal(target_plist["force_install_after_date"],
+            self.test_datetime, self.test_plist)
+        assert_equal(self.test_plist["force_install_after_date"],
                      self.test_datetime)
 
     def test_del_install_after_date(self):
         """Remove an install date key entirely."""
-        target_plist = copy.deepcopy(self.test_plist)
-        phasetool.set_force_install_after_date("", target_plist)
-        assert_is_none(target_plist.get("force_install_after_date"))
+        phasetool.set_force_install_after_date("", self.test_plist)
+        assert_is_none(self.test_plist.get("force_install_after_date"))
 
     def test_set_unattended_install(self):
         """Test setting unattended."""
-        target_plist = copy.deepcopy(self.test_plist)
-        phasetool.set_unattended_install(False, target_plist)
-        assert_equal(target_plist["unattended_install"], False)
+        phasetool.set_unattended_install(False, self.test_plist)
+        assert_equal(self.test_plist["unattended_install"], False)
 
     def test_set_catalog(self):
         """Test setting catalog to a single value."""
-        target_plist = copy.deepcopy(self.test_plist)
-        phasetool.set_catalog("production", target_plist)
-        assert_list_equal(target_plist["catalogs"], ["production"])
+        phasetool.set_catalog("production", self.test_plist)
+        assert_list_equal(self.test_plist["catalogs"], ["production"])
 
 
 class TestCollectUnits(object):
