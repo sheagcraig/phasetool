@@ -43,7 +43,7 @@ def main():
     """Build and parse args, and then kick-off action function."""
     parser = build_argparser()
     args = parser.parse_args()
-    args.repo, args.repo_url = get_munki_repo(args)
+    args.repo = get_munki_repo(args)
     args.func(args)
 
 
@@ -122,15 +122,13 @@ def get_munki_repo(args):
     """Use cli arg for repo, otherwise, get from munkiimport prefs."""
     prefs = read_plist(
         "~/Library/Preferences/com.googlecode.munki.munkiimport.plist")
-    if args.repo:
-        repo = args.repo
-    else:
-        repo = prefs.get("repo_path")
-    if args.repo_url:
-        repo_url = args.repo_url
-    else:
-        repo_url = prefs.get("repo_url")
-    return (repo, repo_url)
+    repo = args.repo if args.repo else prefs.get("repo_path")
+    repo_url = args.repo_url if args.repo_url else prefs.get("repo_url")
+
+    if not mounted(repo):
+        repo = mount(repo_url)
+
+    return repo
 
 
 def read_plist(path):
@@ -175,9 +173,6 @@ def collect(args):
 def get_catalogs(repo_path, repo_url):
     """Build a dictionary of non-prod catalogs and their contents."""
     catalogs = {}
-
-    if not mounted(repo_path):
-        repo_path = mount(repo_url)
 
     # TODO (Shea): this should be a preference.
     testing_catalogs = {"development", "testing", "phase1", "phase2", "phase3"}

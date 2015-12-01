@@ -27,21 +27,41 @@ from nose.tools import *  # pylint: disable=unused-wildcard-import, wildcard-imp
 import phasetool  # pylint: disable=import-error
 
 
+class MockArgs(object):
+    """Fake argparser namespace.
+
+    It's easier to fake a namespace by just using attributes.
+    """
+
+    def __init__(self, repo, repo_url):
+        self.repo = repo
+        self.repo_url = repo_url
+
+
 class TestGlobalUnits(object):
     """Test the phasetool helper units."""
 
-    def test_get_munki_repo(self):
-        class MockArgs(object):
-
-            def __init__(self):
-                self.repo = "/tmp"
-                self.repo_url = "AFP"
-
-        mock_args = MockArgs()
+    def test_get_munki_repo_from_args(self):
+        """Test locating the munki repo."""
+        mock_args = MockArgs("/tmp", "AFP")
         result = phasetool.get_munki_repo(mock_args)
-        assert_equal(("/tmp", "AFP"), result)
+        assert_equal("/tmp", result)
 
-        # TODO: add test for no argument.
+    @mock.patch("phasetool.read_plist")
+    def test_get_munki_repo_without_args(self, mock_prefs):
+        mock_prefs.return_value = {"repo_path": "/tmp", "repo_url": "AFP"}
+        mock_args = MockArgs(False, False)
+        result = phasetool.get_munki_repo(mock_args)
+        assert_equal("/tmp", result)
+
+    @mock.patch("phasetool.mount")
+    def test_get_munki_repo_if_not_mounted(self, mock_mount):
+        path = "/nonexistent/path"
+        mock_mount.return_value = path
+        mock_args = MockArgs(path, "AFP")
+        result = phasetool.get_munki_repo(mock_args)
+        assert_equal(path, result)
+        mock_mount.assert_any_call("AFP")
 
     def test_is_valid_date(self):
         test_date = "2011-08-03T13:00:00Z"
@@ -97,12 +117,6 @@ class TestCollectUnits(object):
         assert_not_in("production", catalog_names)
         assert_set_equal({"testing", "phase1", "phase2", "phase3"},
                          catalog_names)
-
-    @mock.patch("phasetool.mount")
-    def test_get_catalogs_not_mounted(self, mock_mount):
-        mock_mount.return_value = "/DoesNotExist"
-        _ = phasetool.get_catalogs("FailurePath", "None")
-        mock_mount.assert_any_call("None")
 
     @mock.patch("phasetool.write_file", )
     def test_write_path_list(self, mock_write_file):
