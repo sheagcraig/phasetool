@@ -111,11 +111,29 @@ class TestCollectUnits(object):
 
     def test_get_testing_pkginfos(self):
         repo = "test/resources/repo"
-        pkginfos = phasetool.get_testing_pkginfos(repo).keys()
-        expected = [os.path.join("test/resources/repo/pkgsinfo", filename) for
-                    filename in ["Crypt-0.8.0.pkginfo", "Crypt-0.9.0.pkginfo",
-                                 "Crypt-1.0.0.pkginfo", "Crypt-1.5.0.pkginfo"]]
-        assert_list_equal(sorted(expected), sorted(pkginfos))
+        pkginfos = sorted(phasetool.get_testing_pkginfos(repo).keys())
+        # This excludes the production and placeholder pkginfos.
+        expected_filenames = ["Crypt-0.8.0.pkginfo", "Crypt-0.9.0.pkginfo",
+                              "Crypt-1.0.0.pkginfo", "Crypt-1.5.0.pkginfo"]
+        expected = sorted(
+            [os.path.join("test/resources/repo/pkgsinfo", filename) for
+             filename in expected_filenames])
+        assert_list_equal(expected, pkginfos)
+
+    def test_is_testing(self):
+        catalogs = ("testing", "phase1", "development")
+        for catalog in catalogs:
+            assert(phasetool.is_testing({"catalogs": [catalog]}))
+        assert_false(phasetool.is_testing({"catalogs": ["production"]}))
+
+    def test_is_placeholder(self):
+        placeholders = ("Placeholder-1.2.3.pkginfo", "placeholder.plist",
+                        "PLACEHOLDER.plist")
+        not_placeholders = ("NotPlaceholder-1.2.3.pkginfo", "Donkey.plist")
+        for pkginfo in placeholders:
+            assert(phasetool.is_placeholder(pkginfo))
+        for pkginfo in not_placeholders:
+            assert_false(phasetool.is_placeholder(pkginfo))
 
 
     # def test_get_catalogs(self):
@@ -138,8 +156,3 @@ class TestCollectUnits(object):
         assert_equal(mock_write_file.call_args[0][0], devnull +
                      "\xf0\x9f\x92\x9a\x0a")
 
-    def test_not_placeholder(self):
-        placeholder = "Placeholder-Testing-1.3"
-        assert_false(phasetool.not_placeholder(placeholder))
-        not_a_placeholder = "TacoParty-1.3"
-        assert(phasetool.not_placeholder(not_a_placeholder))

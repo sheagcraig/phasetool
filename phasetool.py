@@ -139,7 +139,7 @@ def read_plist(path):
 
 def collect(args):
     """Collect available updates."""
-    pkginfos = get_testing_pkginfos()
+    pkginfos = get_testing_pkginfos(args.repo)
     # catalogs = get_catalogs(args.repo)
     # cache = build_pkginfo_cache(args.repo)
     # testing_updates = {}
@@ -172,7 +172,7 @@ def get_testing_pkginfos(repo):
                 continue
 
             if (is_testing(pkginfo_file) and
-                not_placeholder(pkginfo_file.get("name"))):
+                    not is_placeholder(pkginfo_file.get("name"))):
                 pkginfos[path] = pkginfo_file
 
     return pkginfos
@@ -181,6 +181,10 @@ def get_testing_pkginfos(repo):
 def is_testing(pkginfo):
     catalogs = pkginfo.get("catalogs")
     return any(catalog in TESTING_CATALOGS for catalog in catalogs)
+
+
+def is_placeholder(record_name):
+    return record_name.upper().startswith("PLACEHOLDER")
 
 
 def get_catalogs(repo_path):
@@ -211,10 +215,6 @@ def mount(path):
     except mount_shares_better.MountException as error:
         print error.message
         mount_location = None
-
-
-def not_placeholder(record_name):
-    return not record_name.upper().startswith("PLACEHOLDER")
 
 
 def find_pkginfo_file_in_repo(target, pkginfos):

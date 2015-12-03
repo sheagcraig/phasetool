@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>_metadata</key>
+	<dict>
+		<key>created_by</key>
+		<string>TheDude</string>
+		<key>creation_date</key>
+		<date>2015-05-05T21:40:17Z</date>
+		<key>munki_version</key>
+		<string>2.2.4.2465</string>
+		<key>os_version</key>
+		<string>10.9.5</string>
+	</dict>
+	<key>catalogs</key>
+	<array>
+		<string>testing</string>
+	</array>
+	<key>name</key>
+	<string>Placeholder</string>
+	<key>version</key>
+	<string>1.0.0</string>
+</dict>
+</plist>
