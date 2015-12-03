@@ -145,14 +145,53 @@ class TestCollectUnits(object):
     #     assert_set_equal({"testing", "phase1", "phase2", "phase3"},
     #                      catalog_names)
 
+
+class TestMDOutput(object):
+
+    def setUp(self):
+        self.pkginfos = {"/test/1.pkginfo": {"name": "fancy",
+                                             "display_name": "Wicked Fancy",
+                                             "version": "0.0.1"},
+                         "/test/2.pkginfo": {"name": "a fancy",
+                                             "version": "0.0.2"},
+                         "/test/4.pkginfo": {"display_name": "z fancy",
+                                             "version": "0.0.3"},
+                         "/test/3.pkginfo": {"name": u"\U0001F49A",
+                                             "version": "0.0.3"}}
+        self.test_output_path = "/test/phase_testing.md"
+        self.expected_result = ("## November Phase Testing Updates\n\n"
+                           "- Wicked Fancy 0.0.1\n"
+                           "- a fancy 0.0.2\n"
+                           u"- \U0001F49A 0.0.3\n"
+                           "- z fancy 0.0.3").encode("utf-8")
+
     @mock.patch("phasetool.write_file", )
     def test_write_path_list(self, mock_write_file):
-        devnull = "/dev/null"
-        test_data = {"TEST": {"pkginfo_path": devnull}}
-        phasetool.write_path_list(test_data, devnull)
-        assert_equal(mock_write_file.call_args[0][0], devnull)
-        test_data = {"TEST": {"pkginfo_path": devnull + u"\U0001F49A\n"}}
-        phasetool.write_path_list(test_data, devnull)
-        assert_equal(mock_write_file.call_args[0][0], devnull +
-                     "\xf0\x9f\x92\x9a\x0a")
+        phasetool.write_markdown(self.pkginfos, self.test_output_path)
+        assert_equal(self.expected_result, mock_write_file.call_args[0][0])
+        assert_equal(self.test_output_path, mock_write_file.call_args[0][1])
+
+
+class TestPathOutput(object):
+
+    def setUp(self):
+        self.test_path = "/test/path"
+        self.test_output_path = "/test/phase_testing_files.txt"
+
+    def run_write_file_list(self):
+        test_data = {self.test_path: None}
+        phasetool.write_path_list(test_data, self.test_output_path)
+
+    @mock.patch("phasetool.write_file", )
+    def test_write_path_list(self, mock_write_file):
+        self.run_write_file_list()
+        assert_equal(self.test_path, mock_write_file.call_args[0][0])
+        assert_equal(self.test_output_path, mock_write_file.call_args[0][1])
+
+    @mock.patch("phasetool.write_file", )
+    def test_write_unicode_path_list(self, mock_write_file):
+        self.test_path += u"\U0001F49A\n"
+        self.run_write_file_list()
+        expected = self.test_path.encode("utf-8")
+        assert_equal(expected, mock_write_file.call_args[0][0])
 

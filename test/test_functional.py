@@ -113,6 +113,7 @@ class TestPhaseTool(object):
         assert_list_equal(result[0]["catalogs"], ["production"])
         assert_equal(self.test_datetime, result[1]["force_install_after_date"])
         assert_true(result[1]["unattended_install"])
+        assert_true(result[1]["unattended_install"])
         assert_list_equal(result[1]["catalogs"], ["production"])
 
         # Leif decides typing all of those filenames in is no fun, and
@@ -133,15 +134,22 @@ class TestPhaseTool(object):
     def test_collect_updates(self, mock_repo):
         """Test collecting updates from a repo for phase testing."""
         expected_result = ("## November Phase Testing Updates\n\n"
-                           "- Crypt - enables FileVault encryption 0.7.2\n"
-                           "- Crypt - enables FileVault encryption 0.7.2\n"
+                           "- Crypt - enables FileVault encryption 0.8.0\n"
+                           "- Crypt - enables FileVault encryption 0.9.0\n"
+                           "- Crypt - enables FileVault encryption 1.0.0\n"
                            "- Crypt - enables FileVault encryption 1.5.0")
+        expected_files = ("test/resources/repo/pkgsinfo/Crypt-0.8.0.pkginfo\n"
+                          "test/resources/repo/pkgsinfo/Crypt-0.9.0.pkginfo\n"
+                          "test/resources/repo/pkgsinfo/Crypt-1.0.0.pkginfo\n"
+                          "test/resources/repo/pkgsinfo/Crypt-1.5.0.pkginfo")
         # Leif is testing the collection of updates to see what it
         # finds
         sys.argv = build_args(["--repo", "test/resources/repo", "collect"])
         phasetool.main()
         result_content = mock_repo.call_args_list[0][0][0]
+        result_files = mock_repo.call_args_list[1][0][0]
         assert_equal(expected_result, result_content)
+        assert_equal(expected_files, result_files)
 
     @mock.patch("phasetool.plistlib.writePlist", autospec=True)
     def get_phasetool_results(self, args, mock_write_plist):

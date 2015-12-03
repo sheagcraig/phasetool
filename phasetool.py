@@ -127,7 +127,7 @@ def get_munki_repo(args):
     repo = args.repo if args.repo else prefs.get("repo_path")
     repo_url = args.repo_url if args.repo_url else prefs.get("repo_url")
 
-    if not mounted(repo):
+    if not is_mounted(repo):
         repo = mount(repo_url)
 
     return repo
@@ -137,27 +137,27 @@ def read_plist(path):
     return plistlib.readPlist(os.path.expanduser(path))
 
 
+def is_mounted(path):
+    return os.path.exists(path)
+
+
+def mount(path):
+    # Mac only at the moment!
+    if not os.uname()[0] == "Darwin":
+        raise OSError("Unsupported OS.")
+    if not is_mounted(path):
+        try:
+            mount_location = mount_shares_better.mount_share(path)
+        except mount_shares_better.MountException as error:
+            print error.message
+            mount_location = None
+
+
 def collect(args):
     """Collect available updates."""
     pkginfos = get_testing_pkginfos(args.repo)
-    # catalogs = get_catalogs(args.repo)
-    # cache = build_pkginfo_cache(args.repo)
-    # testing_updates = {}
-    # for cat_name, catalog in catalogs.items():
-    #     for pkginfo in catalog:
-    #         record_name = "{} {}".format(pkginfo["name"], pkginfo["version"])
-    #         if record_name in testing_updates:
-    #             print ("WARNING: Update {} with filename {} is in the repo "
-    #                     "more than once!".format(
-    #                         record_name, pkginfo["installer_item_location"]))
-    #             record_name += pkginfo.get("installer_item_location")
-
-    #         if not_placeholder(record_name):
-    #             testing_updates[record_name] = get_pkginfo_data(
-    #                 pkginfo, cache)
-
-    # write_markdown(testing_updates, "phase_testing.md")
-    # write_path_list(testing_updates, "phase_testing_files.txt")
+    write_markdown(pkginfos, "phase_testing.md")
+    write_path_list(pkginfos, "phase_testing_files.txt")
 
 
 def get_testing_pkginfos(repo):
@@ -185,36 +185,6 @@ def is_testing(pkginfo):
 
 def is_placeholder(record_name):
     return record_name.upper().startswith("PLACEHOLDER")
-
-
-def get_catalogs(repo_path):
-    """Build a dictionary of non-prod catalogs and their contents."""
-    catalogs = {}
-
-    # TODO (Shea): this should be a preference.
-    testing_catalogs = {"development", "testing", "phase1", "phase2", "phase3"}
-
-    for catalog in testing_catalogs:
-        cat_path = os.path.join(repo_path, "catalogs", catalog)
-        if os.path.exists(cat_path):
-            catalogs[catalog] = read_plist(cat_path)
-
-    return catalogs
-
-
-def mounted(path):
-    return os.path.exists(path)
-
-
-def mount(path):
-    # Mac only at the moment!
-    if not os.uname()[0] == "Darwin":
-        raise OSError("Unsupported OS.")
-    try:
-        mount_location = mount_shares_better.mount_share(path)
-    except mount_shares_better.MountException as error:
-        print error.message
-        mount_location = None
 
 
 def find_pkginfo_file_in_repo(target, pkginfos):
@@ -260,40 +230,21 @@ def is_pkginfo(candidate):
     return os.path.splitext(candidate)[-1].lower() in PKGINFO_EXTENSIONS
 
 
-def get_pkginfo_data(pkginfo, cache):
-    """Return a dictionary of useful data relating to pkginfo."""
-    keys = ("name", "display_name", "version", "category", "description",
-            "developer", "installer_item_location")
-    pkginfo_data = {key: pkginfo[key] for key in keys}
-    pkginfo_data["catalog"] = ", ".join(pkginfo.get("catalogs"))
-    pkginfo_data["pkginfo_path"] = find_pkginfo_file_in_repo(
-        pkginfo, cache)
-    return pkginfo_data
-
-
 def write_markdown(data, path):
     """Write markdown data string to path."""
     # TODO: Add template stuff.
     output = [u"## {} Phase Testing Updates\n".format("November")]
     for item_name, item_val in sorted(data.items()):
-        output.append(u"- {} {}".format(item_val["display_name"] or
-                                        item_val["name"], item_val["version"]))
-        # for key in item_val:
-        #     if item_val[key] and key not in (
-        #             "installer_item_location", "name", "version",
-        #             "pkginfo_path", "display_name"):
-        #         output.append(u"    - {}: {}".format(key, item_val[key]))
+        output.append(u"- {} {}".format(
+            item_val.get("display_name") or item_val.get("name"),
+            item_val["version"]))
     output_string = u"\n".join(output).encode("utf-8")
     write_file(output_string, path)
 
 
 def write_path_list(data, path):
     """Write pkginfo path data to path."""
-    output = []
-    for pkginfo in data:
-        output.append(data[pkginfo]["pkginfo_path"])
-
-    output_string = u"\n".join(output).encode("utf-8")
+    output_string = u"\n".join(sorted(data.keys())).encode("utf-8")
     write_file(output_string, path)
 
 
