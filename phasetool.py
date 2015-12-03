@@ -134,23 +134,28 @@ def get_munki_repo(args):
 
 
 def read_plist(path):
+    """Read the plist at path."""
     return plistlib.readPlist(os.path.expanduser(path))
 
 
 def is_mounted(path):
+    """Return whether path is attached to the current filesystem."""
     return os.path.exists(path)
 
 
 def mount(path):
+    """Mount the share specified by path."""
     # Mac only at the moment!
     if not os.uname()[0] == "Darwin":
         raise OSError("Unsupported OS.")
+
+    mount_location = None
     if not is_mounted(path):
         try:
             mount_location = mount_shares_better.mount_share(path)
         except mount_shares_better.MountException as error:
             print error.message
-            mount_location = None
+    return mount_location
 
 
 def collect(args):
@@ -161,12 +166,13 @@ def collect(args):
 
 
 def get_testing_pkginfos(repo):
+    """Return all pkginfo files with testing catalogs."""
     pkginfos = {}
     pkginfo_dir = os.path.join(repo, "pkgsinfo")
-    for dirpath, dirnames, filenames in os.walk(pkginfo_dir):
-        for file in filter(is_pkginfo, filenames):
+    for dirpath, _, filenames in os.walk(pkginfo_dir):
+        for pfile in [fname for fname in filenames if is_pkginfo(fname)]:
             try:
-                path = os.path.join(dirpath, file)
+                path = os.path.join(dirpath, pfile)
                 pkginfo_file = read_plist(path)
             except ExpatError:
                 continue
@@ -179,54 +185,18 @@ def get_testing_pkginfos(repo):
 
 
 def is_testing(pkginfo):
+    """Return whether a pkginfo file specifies any testing catalogs."""
     catalogs = pkginfo.get("catalogs")
     return any(catalog in TESTING_CATALOGS for catalog in catalogs)
 
 
 def is_placeholder(record_name):
+    """Return whether a name is considered a placeholder."""
     return record_name.upper().startswith("PLACEHOLDER")
 
 
-def find_pkginfo_file_in_repo(target, pkginfos):
-    """Find the pkginfo file that matches the input in the repo."""
-    cmp_keys = ("name", "version", "installer_item_location")
-    name = target["name"]
-    version = target["version"]
-    installer = target.get("installer_item_location")
-    candidate_keys = (key for key in pkginfos if name in key and version in
-                      key)
-
-    for candidate_key in candidate_keys:
-        pkginfo_file = pkginfos[candidate_key]
-        if all(target.get(key) == pkginfo_file.get(key) for key in cmp_keys):
-            return candidate_key
-
-    # Brute force if we haven't found one yet.
-    for pkg_key in pkginfos:
-        pkginfo_file = pkginfos[pkg_key]
-        if all(target.get(key) == pkginfo_file.get(key) for key in cmp_keys):
-            return pkg_key
-
-    return None
-
-
-def build_pkginfo_cache(repo):
-    pkginfos = {}
-    pkginfo_dir = os.path.join(repo, "pkgsinfo")
-    for dirpath, dirnames, filenames in os.walk(pkginfo_dir):
-        for file in filter(is_pkginfo, filenames):
-            try:
-                path = os.path.join(dirpath, file)
-                pkginfo_file = plistlib.readPlist(path)
-            except ExpatError:
-                continue
-
-            pkginfos[os.path.join(dirpath, file)] = pkginfo_file
-
-    return pkginfos
-
-
 def is_pkginfo(candidate):
+    """Return whether a filename is a pkginfo by extension."""
     return os.path.splitext(candidate)[-1].lower() in PKGINFO_EXTENSIONS
 
 
@@ -234,7 +204,7 @@ def write_markdown(data, path):
     """Write markdown data string to path."""
     # TODO: Add template stuff.
     output = [u"## {} Phase Testing Updates\n".format("November")]
-    for item_name, item_val in sorted(data.items()):
+    for _, item_val in sorted(data.items()):
         output.append(u"- {} {}".format(
             item_val.get("display_name") or item_val.get("name"),
             item_val["version"]))
@@ -354,7 +324,7 @@ def is_valid_date(date):
     try:
         _ = datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
         result = True
-    except ValueError as err:
+    except ValueError:
         pass
     return result
 
