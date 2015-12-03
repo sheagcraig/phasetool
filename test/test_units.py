@@ -38,30 +38,43 @@ class MockArgs(object):
         self.repo_url = repo_url
 
 
-class TestGlobalUnits(object):
-    """Test the phasetool helper units."""
+class TestGetMunkiRepo(object):
+    """Test the phasetool munki repo units."""
 
-    def test_get_munki_repo_from_args(self):
+    def run_with_mock_args(self, args, expected, mock_mount):
+        mock_args = MockArgs(args[0], args[1])
+        mock_mount.return_value = args[0]
+        result = phasetool.get_munki_repo(mock_args)
+        assert_equal(expected[0], result)
+        if expected[1]:
+            mock_mount.assert_any_call(expected[1])
+        else:
+            mock_mount.assert_not_called()
+
+    @mock.patch("phasetool.mount")
+    def test_get_munki_repo_from_args(self, mock_mount):
         """Test locating the munki repo."""
-        mock_args = MockArgs("/tmp", "AFP")
-        result = phasetool.get_munki_repo(mock_args)
-        assert_equal("/tmp", result)
+        args = ("/tmp", None)
+        expected = args
+        self.run_with_mock_args(args, expected, mock_mount)
 
+    @mock.patch("phasetool.mount")
     @mock.patch("phasetool.read_plist")
-    def test_get_munki_repo_without_args(self, mock_prefs):
-        mock_prefs.return_value = {"repo_path": "/tmp", "repo_url": "AFP"}
-        mock_args = MockArgs(False, False)
-        result = phasetool.get_munki_repo(mock_args)
-        assert_equal("/tmp", result)
+    def test_get_munki_repo_without_args(self, mock_prefs, mock_mount):
+        dargs = ("/tmp", None)
+        mock_prefs.return_value = {"repo_path": dargs[0], "repo_url": dargs[1]}
+        self.run_with_mock_args((False, False), dargs, mock_mount)
 
     @mock.patch("phasetool.mount")
     def test_get_munki_repo_if_not_mounted(self, mock_mount):
-        path = "/nonexistent/path"
-        mock_mount.return_value = path
-        mock_args = MockArgs(path, "AFP")
-        result = phasetool.get_munki_repo(mock_args)
-        assert_equal(path, result)
+        args = ("/nonexistent/path", "AFP")
+        expected = args
+        self.run_with_mock_args(args, expected, mock_mount)
         mock_mount.assert_any_call("AFP")
+
+
+class TestDates(object):
+    """Test the date functions."""
 
     def test_is_valid_date(self):
         test_date = "2011-08-03T13:00:00Z"
@@ -73,37 +86,23 @@ class TestGlobalUnits(object):
             assert_false(phasetool.is_valid_date(invalid_date))
 
 
-class TestPrepareUnits(object):
-    """Test the phasetool prepare units."""
+class TestPlistSetters(object):
+    """Test the plist property setting and removing funcs."""
 
-    def setUp(self):
-        self.test_plist = phasetool.plistlib.readPlist(
-            "test/resources/repo/pkgsinfo/Crypt-0.7.2.pkginfo")
-        self.test_date = "2011-08-03T13:00:00Z"
-        self.test_datetime = datetime.datetime.strptime(
-            self.test_date, "%Y-%m-%dT%H:%M:%SZ")
-
-    def test_set_install_after_date(self):
-        """Set a date."""
-        phasetool.set_force_install_after_date(
-            self.test_datetime, self.test_plist)
-        assert_equal(self.test_plist["force_install_after_date"],
-                     self.test_datetime)
-
-    def test_del_install_after_date(self):
-        """Remove an install date key entirely."""
-        phasetool.set_force_install_after_date("", self.test_plist)
-        assert_is_none(self.test_plist.get("force_install_after_date"))
-
-    def test_set_unattended_install(self):
-        """Test setting unattended."""
-        phasetool.set_unattended_install(False, self.test_plist)
-        assert_equal(self.test_plist["unattended_install"], False)
+    def test_set_key(self):
+        pass
 
     def test_set_catalog(self):
-        """Test setting catalog to a single value."""
-        phasetool.set_catalog("production", self.test_plist)
-        assert_list_equal(self.test_plist["catalogs"], ["production"])
+        pass
+
+    def test_set_unattended_install(self):
+        pass
+
+    def test_set_force_install_after_date(self):
+        pass
+
+    def test_remove_key(self):
+        pass
 
 
 class TestCollectUnits(object):
@@ -134,16 +133,6 @@ class TestCollectUnits(object):
             assert(phasetool.is_placeholder(pkginfo))
         for pkginfo in not_placeholders:
             assert_false(phasetool.is_placeholder(pkginfo))
-
-
-    # def test_get_catalogs(self):
-    #     catalogs = phasetool.get_catalogs("test/resources/repo", "None")
-    #     catalog_names = set(catalogs.keys())
-    #     # This assumes we want to include ALL updates in phase testing
-    #     # except those in production.
-    #     assert_not_in("production", catalog_names)
-    #     assert_set_equal({"testing", "phase1", "phase2", "phase3"},
-    #                      catalog_names)
 
 
 class TestMDOutput(object):
@@ -194,4 +183,37 @@ class TestPathOutput(object):
         self.run_write_file_list()
         expected = self.test_path.encode("utf-8")
         assert_equal(expected, mock_write_file.call_args[0][0])
+
+
+class TestPrepareUnits(object):
+    """Test the phasetool prepare units."""
+
+    def setUp(self):
+        self.test_plist = phasetool.plistlib.readPlist(
+            "test/resources/repo/pkgsinfo/Crypt-0.7.2.pkginfo")
+        self.test_date = "2011-08-03T13:00:00Z"
+        self.test_datetime = datetime.datetime.strptime(
+            self.test_date, "%Y-%m-%dT%H:%M:%SZ")
+
+    def test_set_install_after_date(self):
+        """Set a date."""
+        phasetool.set_force_install_after_date(
+            self.test_datetime, self.test_plist)
+        assert_equal(self.test_plist["force_install_after_date"],
+                     self.test_datetime)
+
+    def test_del_install_after_date(self):
+        """Remove an install date key entirely."""
+        phasetool.set_force_install_after_date("", self.test_plist)
+        assert_is_none(self.test_plist.get("force_install_after_date"))
+
+    def test_set_unattended_install(self):
+        """Test setting unattended."""
+        phasetool.set_unattended_install(False, self.test_plist)
+        assert_equal(self.test_plist["unattended_install"], False)
+
+    def test_set_catalog(self):
+        """Test setting catalog to a single value."""
+        phasetool.set_catalog("production", self.test_plist)
+        assert_list_equal(self.test_plist["catalogs"], ["production"])
 
