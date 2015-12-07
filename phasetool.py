@@ -26,6 +26,7 @@ import argparse
 import datetime
 import os
 import plistlib
+import subprocess
 import sys
 from xml.parsers.expat import ExpatError
 
@@ -145,18 +146,29 @@ def is_mounted(path):
 
 def mount(path):
     """Mount the share specified by path."""
-    # Mac only at the moment!
-    if not os.uname()[0] == "Darwin":
-        raise OSError("Unsupported OS.")
-
     mount_location = None
     if not is_mounted(path):
-        try:
-            mount_location = mount_shares_better.mount_share(path)
-        except mount_shares_better.MountException as error:
-            print error.message
-    return mount_location
+        if hasattr(mount_shares_better, "mount_share"):
+            try:
+                mount_location = mount_shares_better.mount_share(path)
+            except mount_shares_better.MountException as error:
+                print error.message
+        else:
+            if os.uname() == "Darwin":
+                mount_base = "/Volumes"
+            else:
+                mount_base = "/mnt"
+            mount_point = os.path.join(mount_base, os.path.basename(path))
+            args = ["mount_afp", path, mount_point]
+            try:
+                subprocess.check_call(args)
+            except subprocess.CalledProcessError as error:
+                raise PhasetoolError(
+                    "Unable to mount {} at {} with error '{}'.".format(
+                        path, mount_point, error.meesage))
+            mount_location = mount_point
 
+    return mount_location
 
 def collect(args):
     """Collect available updates."""

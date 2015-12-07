@@ -73,6 +73,37 @@ class TestGetMunkiRepo(object):
         mock_mount.assert_any_call("AFP")
 
 
+class TestMount(object):
+    """Test os-specific mounting."""
+
+    @mock.patch("phasetool.mount_shares_better.mount_share")
+    def test_os_x_py_mount(self, mock_mount):
+        expected = "/Volumes/repo"
+        args = "afp://u:p@server/repo"
+        mock_mount.return_value = expected
+        assert_equal(expected, phasetool.mount(args))
+        mock_mount.assert_any_call(args)
+
+    @mock.patch("phasetool.subprocess.check_call")
+    @mock.patch("phasetool.os.uname")
+    @mock.patch("phasetool.mount_shares_better", spec="")
+    def test_linux_py_mount(self, mock_msb, mock_uname, mock_mount):
+        self.run_mount(("Linux", "/mnt"), mock_uname, mock_mount)
+
+    @mock.patch("phasetool.subprocess.check_call")
+    @mock.patch("phasetool.os.uname")
+    @mock.patch("phasetool.mount_shares_better", spec="")
+    def test_osx_alien_py_mount(self, mock_msb, mock_uname, mock_mount):
+        self.run_mount(("Darwin", "/Volumes"), mock_uname, mock_mount)
+
+    def run_mount(self, os_info, mock_uname, mock_mount):
+        expected = os.path.join(os_info[1], "repo")
+        args = "afp://u:p@server/repo"
+        mock_uname.return_value = os_info[0]
+        assert_equal(expected, phasetool.mount(args))
+        mock_mount.assert_any_call(["mount_afp", args, expected])
+
+
 class TestDates(object):
     """Test the date functions."""
 
@@ -90,7 +121,7 @@ class TestPlistSetters(object):
     """Test the plist property setting and removing funcs."""
 
     def test_set_key(self):
-        pass
+        assert(False)
 
     def test_set_catalog(self):
         pass
