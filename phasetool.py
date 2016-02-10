@@ -70,6 +70,8 @@ def build_argparser():
              "will be ignored.")
     collect_parser = subparser.add_parser("collect", help=phelp)
     collect_parser.set_defaults(func=collect)
+    phelp = "Path to save output files."
+    collect_parser.add_argument("output_path", help=phelp)
 
     # Prepare arguments
     phelp = ("Set the force_install_after_date and unattended_install value "
@@ -170,11 +172,16 @@ def mount(path):
 
     return mount_location
 
+
 def collect(args):
     """Collect available updates."""
     pkginfos = get_testing_pkginfos(args.repo)
-    write_markdown(pkginfos, "phase_testing.md")
-    write_path_list(pkginfos, "phase_testing_files.txt")
+    output_path = os.path.expanduser(args.output_path)
+    prefix = os.path.join(output_path,
+                          datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+
+    write_markdown(pkginfos, "{}-phase_testing.md".format(prefix))
+    write_path_list(pkginfos, "{}-phase_testing_files.txt".format(prefix))
 
 
 def get_testing_pkginfos(repo):
