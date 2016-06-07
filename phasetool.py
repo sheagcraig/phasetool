@@ -222,7 +222,8 @@ def is_pkginfo(candidate):
 def write_markdown(data, path):
     """Write markdown data string to path."""
     # TODO: Add template stuff.
-    output = [u"## {} Phase Testing Updates\n".format("November")]
+    month = datetime.datetime.now().strftime("%B")
+    output = [u"## {} Phase Testing Updates\n".format(month)]
     for _, item_val in sorted(data.items()):
         output.append(u"- {} {}".format(
             item_val.get("display_name") or item_val.get("name"),
