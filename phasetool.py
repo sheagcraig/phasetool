@@ -25,7 +25,6 @@ and unattended_install value of False.
 import argparse
 import datetime
 import os
-import plistlib
 import subprocess
 import sys
 from xml.parsers.expat import ExpatError
@@ -34,6 +33,12 @@ try:
     import mount_shares_better
 except ImportError:
     mount_shares_better = None
+
+try:
+    sys.path.append("/usr/local/munki/munkilib")
+    import FoundationPlist as plistlib
+except ImportError:
+    import plistlib
 
 
 # TODO: Get this from Munki preferences.
@@ -223,7 +228,21 @@ def write_markdown(data, path):
     """Write markdown data string to path."""
     # TODO: Add template stuff.
     month = datetime.datetime.now().strftime("%B")
+    schedule = []
+    today = datetime.date.today()
+    phases = (("Phase 1", 0, 3),
+              ("Phase 2", 6, 10),
+              ("Phase 3", 13, 17),
+              ("Production", 20, 25))
     output = [u"## {} Phase Testing Updates\n".format(month)]
+    output.append("## Schedule")
+    output.append("| Phase | Available | Required |")
+    output.append("| ----- | --------- | -------- |")
+    for phase in phases:
+        start = today + datetime.timedelta(days=phase[1])
+        end = today + datetime.timedelta(days=phase[2])
+        output.append("| {} | {} | {} |".format(phase[0], start, end))
+    output.append("")
     for _, item_val in sorted(data.items()):
         output.append(u"- {} {}".format(
             item_val.get("display_name") or item_val.get("name"),
